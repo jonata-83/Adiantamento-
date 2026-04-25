@@ -1,0 +1,28 @@
+{
+  "name": "Adiantamentos",
+  "short_name": "Adiantamentos",
+  "description": "Controle de adiantamentos e pagamentos",
+  "start_url": "/Adiantamento-/adiantamentos.html",
+  "scope": "/Adiantamento-/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a3a5c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4b0.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4b0.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4b0.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
