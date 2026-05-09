@@ -704,8 +704,14 @@ function exportarPDFPessoa(id) {
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Adiantamento - ${p.nome}</title>
-  <style>body { font-family: Arial, sans-serif; margin: 20px; color: #1e293b; font-size: 16px; }</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; color: #1e293b; font-size: 16px; }
+    .btn-share { width:100%; padding:14px; background:#25d366; color:#fff; border:none; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; margin-top:20px; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-share:active { opacity:0.8; }
+  </style>
   </head><body>
+    <div id="relatorio">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:3px solid #1a3a5c;padding-bottom:12px">
       <div>
         <div style="font-size:24px;font-weight:700;color:#1a3a5c">💰 ${p.nome}</div>
@@ -746,6 +752,24 @@ function exportarPDFPessoa(id) {
             </tr>`).join('')}
       </tbody>
     </table>
+    </div>
+    <button class="btn-share" onclick="compartilharImagem()">📤 Compartilhar como imagem</button>
+    <script>
+    function compartilharImagem() {
+      html2canvas(document.getElementById('relatorio'), { scale: 2, backgroundColor: '#fff' }).then(canvas => {
+        canvas.toBlob(blob => {
+          const file = new File([blob], 'relatorio.png', { type: 'image/png' });
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: 'Relatório' });
+          } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'relatorio.png'; a.click();
+          }
+        });
+      });
+    }
+    <\/script>
   </body></html>`;
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
