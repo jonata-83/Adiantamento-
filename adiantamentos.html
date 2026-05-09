@@ -686,11 +686,13 @@ function exportarPDF() {
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `adiantamentos_${hoje().replace(/\//g,'-')}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    // Fallback para apps nativos
+    document.open();
+    document.write(html);
+    document.close();
+  }
 }
 
 function exportarPDFPessoa(id) {
@@ -748,11 +750,12 @@ function exportarPDFPessoa(id) {
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${p.nome.replace(/\s+/g,'_')}_${hoje().replace(/\//g,'-')}.html`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const w = window.open(url, '_blank');
+  if (!w) {
+    document.open();
+    document.write(html);
+    document.close();
+  }
 }
 
 // Calculadora
