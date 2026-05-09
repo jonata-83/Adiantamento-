@@ -706,58 +706,54 @@ function exportarPDFPessoa(id) {
   <title>Adiantamento - ${p.nome}</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 12px; color: #1e293b; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    th, td { padding: 8px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    th:nth-child(1), td:nth-child(1) { width: 28%; }
-    th:nth-child(2), td:nth-child(2) { width: 28%; }
-    th:nth-child(3), td:nth-child(3) { width: 22%; text-align: right; }
-    th:nth-child(4), td:nth-child(4) { width: 22%; text-align: right; }
+    body { font-family: Arial, sans-serif; margin: 10px; color: #1e293b; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { padding: 7px 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    th:nth-child(1), td:nth-child(1) { width: 45%; }
+    th:nth-child(2), td:nth-child(2) { width: 30%; text-align: right; }
+    th:nth-child(3), td:nth-child(3) { width: 25%; text-align: right; }
   </style>
   </head><body>
     <div id="relatorio">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:3px solid #1a3a5c;padding-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:2px solid #1a3a5c;padding-bottom:8px">
       <div>
-        <div style="font-size:24px;font-weight:700;color:#1a3a5c">💰 ${p.nome}</div>
-        <div style="font-size:14px;color:#94a3b8;margin-top:4px">Relatório gerado em ${hoje()}</div>
+        <div style="font-size:18px;font-weight:700;color:#1a3a5c">💰 ${p.nome}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:2px">${hoje()}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:13px;color:#94a3b8;text-transform:uppercase">Saldo</div>
-        <div style="font-size:24px;font-weight:700">${salLabel}</div>
+        <div style="font-size:10px;color:#94a3b8;text-transform:uppercase">Saldo</div>
+        <div style="font-size:16px;font-weight:700">${salLabel}</div>
       </div>
     </div>
-    <div style="display:flex;gap:12px;margin-bottom:20px">
-      <div style="flex:1;background:#dbeafe;border-radius:8px;padding:14px">
-        <div style="font-size:13px;font-weight:700;color:#2563eb;text-transform:uppercase">Adiantado</div>
-        <div style="font-size:22px;font-weight:700;color:#2563eb;margin-top:6px">${fmt(totalEntradas(p))}</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <div style="flex:1;background:#dbeafe;border-radius:6px;padding:8px">
+        <div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase">Adiantado</div>
+        <div style="font-size:16px;font-weight:700;color:#2563eb;margin-top:2px">${fmt(totalEntradas(p))}</div>
       </div>
-      <div style="flex:1;background:#dcfce7;border-radius:8px;padding:14px">
-        <div style="font-size:13px;font-weight:700;color:#15803d;text-transform:uppercase">Recebido</div>
-        <div style="font-size:22px;font-weight:700;color:#15803d;margin-top:6px">${fmt(totalPagamentos(p))}</div>
+      <div style="flex:1;background:#dcfce7;border-radius:6px;padding:8px">
+        <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase">Recebido</div>
+        <div style="font-size:16px;font-weight:700;color:#15803d;margin-top:2px">${fmt(totalPagamentos(p))}</div>
       </div>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed">
+    <table>
       <thead>
         <tr style="background:#1a3a5c;color:#fff">
-          <th style="padding:8px 6px;text-align:left;width:28%">Tipo</th>
-          <th style="padding:8px 6px;text-align:left;width:28%">Descrição</th>
-          <th style="padding:8px 6px;text-align:right;width:22%">Valor</th>
-          <th style="padding:8px 6px;text-align:right;width:22%">Data</th>
+          <th style="padding:7px 6px;text-align:left">Descrição</th>
+          <th style="padding:7px 6px;text-align:right">Valor</th>
+          <th style="padding:7px 6px;text-align:right">Data</th>
         </tr>
       </thead>
       <tbody>
-        ${p.lancamentos.length === 0 ? '<tr><td colspan="4" style="padding:14px;text-align:center;color:#94a3b8">Sem lançamentos</td></tr>' :
+        ${p.lancamentos.length === 0 ? '<tr><td colspan="3" style="padding:10px;text-align:center;color:#94a3b8">Sem lançamentos</td></tr>' :
           p.lancamentos.map((l, i) => `
             <tr style="background:${i%2===0?'#fff':'#f8fafc'}">
-              <td style="padding:8px 6px;color:${l.tipo==='entrada'?'#2563eb':'#15803d'};font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.tipo==='entrada'?'Adiantamento':'Pagamento'}</td>
-              <td style="padding:8px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</td>
-              <td style="padding:8px 6px;text-align:right;font-weight:600;color:${l.tipo==='entrada'?'#2563eb':'#15803d'}">${l.tipo==='pagamento'?'-':'+'}${fmt(l.valor)}</td>
-              <td style="padding:8px 6px;text-align:right;color:#475569;font-weight:500;font-size:12px">${l.data||'—'}</td>
+              <td style="padding:7px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.descricao}</td>
+              <td style="padding:7px 6px;text-align:right;font-weight:600;color:${l.tipo==='entrada'?'#2563eb':'#15803d'}">${l.tipo==='pagamento'?'-':'+'}${fmt(l.valor)}</td>
+              <td style="padding:7px 6px;text-align:right;color:#475569;font-size:11px">${l.data||'—'}</td>
             </tr>`).join('')}
       </tbody>
     </table>
     </div>
-    <button onclick="window.print()" style="width:100%;margin-top:20px;padding:14px;background:#1a3a5c;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">🖨️ Salvar como PDF / Imprimir</button>
   </body></html>`;
 
   const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
