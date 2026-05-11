@@ -328,7 +328,11 @@ function renderPessoas(el) {
     el.innerHTML = `<div class="empty"><div class="icon">👥</div><p>Nenhuma pessoa cadastrada.<br>Toque no + para adicionar.</p></div>`;
     return;
   }
-  el.innerHTML = state.pessoas.map(p => {
+  el.innerHTML = [...state.pessoas].sort((a, b) => {
+    const tsA = a.lancamentos.length ? Math.max(...a.lancamentos.map(l => l.ts||0)) : 0;
+    const tsB = b.lancamentos.length ? Math.max(...b.lancamentos.map(l => l.ts||0)) : 0;
+    return tsB - tsA;
+  }).map(p => {
     const saldo = saldoP(p);
     const { cls, label } = saldoInfo(saldo);
     const haverTag = saldo < 0 ? `<span class="pessoa-tag tag-haver">↑ Saldo ${fmt(Math.abs(saldo))}</span>` : '';
