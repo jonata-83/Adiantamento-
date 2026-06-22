@@ -65,7 +65,6 @@
   .header-emoji { font-size: 22px; }
   .header-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.5); }
 
-  /* Card flutuante */
   .float-card {
     background: rgba(0,0,0,0.25);
     border-radius: 16px;
@@ -90,7 +89,6 @@
   .tab { flex: 1; background: transparent; border: none; border-radius: 50px; padding: 8px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); cursor: pointer; text-align: center; transition: all 0.2s; }
   .tab.active { color: #fff; font-weight: 800; border-bottom: 2px solid #fff; border-radius: 0; }
 
-  /* Pessoa card */
   .pessoa-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; cursor: pointer; transition: transform 0.15s; animation: fadeUp 0.2s ease both; }
   .pessoa-card:active { transform: scale(0.98); }
   .pessoa-top { display: flex; justify-content: space-between; align-items: center; }
@@ -106,7 +104,6 @@
   .tag-haver { color: var(--purple); }
   .arrow { color: var(--text-soft); font-size: 18px; margin-left: 4px; }
 
-  /* Detail */
   .detail-header { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; }
   .detail-back { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; margin-bottom: 10px; }
   .detail-nome { font-size: 20px; font-weight: 700; }
@@ -119,7 +116,6 @@
   .stat-entrada { background: var(--accent-light); color: var(--accent); }
   .stat-pagamento { background: var(--green-light); color: var(--green); }
 
-  /* Lançamentos */
   .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-soft); padding: 4px 2px 2px; }
   .lanc-card { background: var(--surface); border-radius: var(--radius-sm); padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 6px rgba(0,0,0,0.05); animation: fadeUp 0.2s ease both; border-left: 3px solid transparent; cursor: pointer; user-select: none; transition: background 0.1s; }
   .lanc-card.pressing { background: #2e2e2e; }
@@ -135,7 +131,6 @@
   .lanc-val-pagamento { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--green); font-weight: 500; }
   .lanc-btns { display: flex; gap: 4px; }
 
-  /* Haver banner */
   .haver-banner {
     background: var(--purple-light);
     border: 1.5px solid #c4b5fd;
@@ -149,7 +144,6 @@
     font-weight: 600;
   }
 
-  /* Buttons */
   .btn { border: none; border-radius: 50px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.15s, transform 0.1s; }
   .btn:active { transform: scale(0.96); opacity: 0.85; }
   .btn-primary { background: var(--accent); color: #fff; }
@@ -159,7 +153,6 @@
   .icon-btn { background: var(--bg); border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; flex-shrink: 0; }
   .icon-btn:active { background: var(--border); }
 
-  /* FAB */
   .fab-group { position: fixed; bottom: 24px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; z-index: 50; }
   .fab-main { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 24px; border: none; box-shadow: 0 4px 20px rgba(37,99,235,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
   .fab-main:active { transform: scale(0.93); }
@@ -170,12 +163,10 @@
   .fab-entrada-btn { background: var(--accent); color: #fff; }
   .fab-pagamento-btn { background: var(--green); color: #fff; }
 
-  /* Empty */
   .empty { text-align: center; padding: 48px 24px; color: var(--text-soft); }
   .empty .icon { font-size: 48px; margin-bottom: 12px; }
   .empty p { font-size: 14px; }
 
-  /* Modal */
   .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
   .modal { background: #242424; border-radius: 24px 24px 0 0; padding: 24px 22px 40px; width: 100%; max-width: 480px; animation: slideUp 0.25s ease; }
   .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 18px; }
@@ -189,7 +180,6 @@
 
   .content { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 90px; }
 
-  /* Calculadora */
   .calc-display { background: #111; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; text-align: right; }
   .calc-expr { font-size: 12px; color: var(--text-soft); min-height: 16px; font-family: 'DM Mono', monospace; }
   .calc-result { font-family: 'DM Mono', monospace; font-size: 26px; color: var(--text); font-weight: 500; }
@@ -202,7 +192,6 @@
   .calc-eq { background: var(--accent); color: #fff; }
   .calc-usar { width: 100%; padding: 11px; background: #1a3a26; color: #4ade80; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 10px; }
 
-
   .resumo-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; animation: fadeUp 0.2s ease both; }
   .resumo-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .resumo-row:last-child { border-bottom: none; }
@@ -213,6 +202,24 @@
   .resumo-total { background: var(--accent-light); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
   .resumo-total-label { font-weight: 700; color: var(--primary); font-size: 14px; }
   .resumo-total-val { font-family: 'DM Mono', monospace; font-weight: 700; color: var(--primary); font-size: 18px; }
+
+  /* Backup/Restore banner */
+  .backup-bar {
+    background: #1a2a1a;
+    border: 1.5px solid #2a4a2a;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .backup-bar-left { display: flex; align-items: center; gap: 8px; }
+  .backup-bar-label { font-size: 12px; font-weight: 700; color: #4ade80; }
+  .backup-bar-sub { font-size: 11px; color: #606060; margin-top: 1px; }
+  .backup-btn { border: none; border-radius: 50px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+  .backup-btn-export { background: #1a3a26; color: #4ade80; }
+  .backup-btn-import { background: #1e3a6e; color: #4d8ef0; }
 
   @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -253,6 +260,9 @@
   </div>
 </div>
 
+<!-- Input oculto para importar arquivo -->
+<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importarJSON(event)">
+
 <script>
 const STORAGE_KEY = 'adiantamentos-v3';
 let state = { pessoas: [], nextId: 1 };
@@ -275,7 +285,6 @@ const nextLancId = p => p.lancamentos.length ? Math.max(...p.lancamentos.map(l =
 const totalEntradas = p => p.lancamentos.filter(l => l.tipo==='entrada').reduce((s,l) => s+l.valor, 0);
 const totalPagamentos = p => p.lancamentos.filter(l => l.tipo==='pagamento').reduce((s,l) => s+l.valor, 0);
 const saldoP = p => totalEntradas(p) - totalPagamentos(p);
-// Saldo geral: só soma os que ainda devem (saldo positivo = devem a você) e não estão silenciosos
 const totalGeralSaldo = () => state.pessoas.reduce((s,p) => {
   if (p.silencioso) return s;
   const sal = saldoP(p);
@@ -283,18 +292,95 @@ const totalGeralSaldo = () => state.pessoas.reduce((s,p) => {
 }, 0);
 const totalGeralEntradas = () => state.pessoas.reduce((s,p) => s+totalEntradas(p), 0);
 
-// Data atual formatada
 const hoje = () => {
   const d = new Date();
   return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
 };
 
-// Status do saldo
 function saldoInfo(saldo) {
   if (saldo > 0)  return { cls: 'saldo-devedor', label: fmt(saldo), desc: 'deve a você' };
   if (saldo < 0)  return { cls: 'saldo-haver',   label: '↑ ' + fmt(Math.abs(saldo)), desc: 'Saldo positivo' };
   return               { cls: 'saldo-zerado',  label: '✅ Quitado', desc: '' };
 }
+
+// ─── BACKUP / RESTORE ─────────────────────────────────────────
+function exportarJSON() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const agora = new Date();
+  const stamp = agora.toLocaleDateString('pt-BR').replace(/\//g,'-') + '_' +
+    agora.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const fileName = `adiantamentos-backup-${stamp}.json`;
+
+  const file = new File([blob], fileName, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({ files: [file], title: 'Backup Adiantamentos' }).catch(() => {
+      baixarJSON(blob, fileName);
+    });
+  } else {
+    baixarJSON(blob, fileName);
+  }
+}
+
+function baixarJSON(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function abrirImportar() {
+  document.getElementById('importFileInput').click();
+}
+
+function importarJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      // Validação básica
+      if (!dados.pessoas || !Array.isArray(dados.pessoas)) {
+        showToast('❌ Arquivo inválido!');
+        return;
+      }
+      const total = dados.pessoas.length;
+      const totalLanc = dados.pessoas.reduce((s,p) => s + (p.lancamentos?.length||0), 0);
+      // Pede confirmação
+      showModal('📥 Restaurar Backup', `
+        <div class="confirm-text">
+          Arquivo contém <strong>${total} pessoa(s)</strong> e <strong>${totalLanc} lançamento(s)</strong>.<br><br>
+          <span style="color:var(--red)">⚠️ Os dados atuais serão substituídos.</span><br>
+          Tem certeza?
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="confirmarImport()">Restaurar</button>
+        </div>`);
+      // Guarda temporariamente
+      window._pendingImport = dados;
+    } catch {
+      showToast('❌ Erro ao ler arquivo!');
+    }
+    // Reseta input para permitir reimportar o mesmo arquivo
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function confirmarImport() {
+  if (!window._pendingImport) return;
+  state = window._pendingImport;
+  window._pendingImport = null;
+  save();
+  closeModal();
+  render();
+  showToast('✅ Backup restaurado com sucesso!');
+}
+// ──────────────────────────────────────────────────────────────
 
 function render() {
   document.getElementById('totalGeral').textContent = fmt(totalGeralSaldo());
@@ -336,11 +422,26 @@ function renderFabDetalhe(el) {
 function toggleFab() { fabOpen = !fabOpen; render(); }
 
 function renderPessoas(el) {
+  const backupBar = `
+    <div class="backup-bar">
+      <div class="backup-bar-left">
+        <span style="font-size:20px">🛡️</span>
+        <div>
+          <div class="backup-bar-label">Backup dos dados</div>
+          <div class="backup-bar-sub">Exporte antes de atualizar o app</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="backup-btn backup-btn-export" onclick="exportarJSON()">⬆️ Exportar</button>
+        <button class="backup-btn backup-btn-import" onclick="abrirImportar()">⬇️ Importar</button>
+      </div>
+    </div>`;
+
   if (state.pessoas.length === 0) {
-    el.innerHTML = `<div class="empty"><div class="icon">👥</div><p>Nenhuma pessoa cadastrada.<br>Toque no + para adicionar.</p></div>`;
+    el.innerHTML = backupBar + `<div class="empty"><div class="icon">👥</div><p>Nenhuma pessoa cadastrada.<br>Toque no + para adicionar.</p></div>`;
     return;
   }
-  el.innerHTML = [...state.pessoas].sort((a, b) => {
+  el.innerHTML = backupBar + [...state.pessoas].sort((a, b) => {
     const tsA = a.lancamentos.length ? Math.max(...a.lancamentos.map(l => l.ts||0)) : 0;
     const tsB = b.lancamentos.length ? Math.max(...b.lancamentos.map(l => l.ts||0)) : 0;
     return tsB - tsA;
@@ -391,7 +492,6 @@ function renderDetalhe(el) {
     const tipoLabel = isFluxo ? (l.tipo==='entrada'?'Saída':'Entrada') : (l.tipo==='entrada'?'Adiantamento':'Pagamento');
     return `${tipoLabel} · ${l.data || '—'}`;
   };
-  const toggleLabel = isFluxo ? '💸 Modo padrão' : '🔄 Modo fluxo';
 
   el.innerHTML = `
     <div class="detail-header">
@@ -407,7 +507,6 @@ function renderDetalhe(el) {
       </div>
       <div class="detail-saldo-label">${saldo < 0 ? 'Saldo positivo' : saldo === 0 ? 'Situação' : 'Saldo devedor'}</div>
       <div class="detail-saldo ${cls}">${label}</div>
-      ${desc ? `` : ''}
       <div class="detail-stats">
         <div class="stat-box stat-entrada"><div class="stat-label">${label1}</div><div class="stat-val">${fmt(totalEntradas(p))}</div></div>
         <div class="stat-box stat-pagamento"><div class="stat-label">${label2}</div><div class="stat-val">${fmt(totalPagamentos(p))}</div></div>
@@ -577,7 +676,6 @@ function editLanc(pessoaId, lancId) {
   const l = p?.lancamentos.find(x => x.id===lancId); if (!l) return;
   const title = l.tipo==='entrada' ? '💸 Editar Adiantamento' : '✅ Editar Pagamento';
   const btnCls = l.tipo==='entrada' ? 'btn-primary' : 'btn-green';
-  // Converte data dd/mm/yyyy para yyyy-mm-dd para o input type=date
   const dataParaInput = (d) => {
     if (!d) return '';
     const [dia, mes, ano] = d.split('/');
@@ -600,7 +698,7 @@ function saveEditLanc() {
   const desc = document.getElementById('inDesc').value.trim();
   const val = parseFloat(document.getElementById('inVal').value);
   if (!desc || isNaN(val) || val<=0) return;
-  const dataRaw = document.getElementById('inData').value; // yyyy-mm-dd
+  const dataRaw = document.getElementById('inData').value;
   const p = getPessoa(editTarget.pessoaId);
   const l = p?.lancamentos.find(x => x.id===editTarget.lancId);
   let dataFmt = l?.data || hoje();
@@ -639,7 +737,6 @@ function exportarPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
   const now = hoje();
-  // Cabeçalho limpo sem fundo
   doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,92);
   doc.text('Relatório de Adiantamentos', 40, 36);
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(148,163,184);
@@ -675,7 +772,6 @@ function exportarPDF() {
     columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
     didParseCell:d=>{ if(d.column.index===3&&d.section==='body'){const p=state.pessoas[d.row.index];if(p)d.cell.styles.textColor=saldoP(p)>0?[185,28,28]:saldoP(p)<0?[124,58,237]:[21,128,61];}},
     margin:{left:40,right:40} });
-  // Gera preview HTML
   let previewHtml = `<div style="font-family:Arial,sans-serif;color:#1e293b;">
     <div style="margin-bottom:16px;border-bottom:2px solid #1a3a5c;padding-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
       <div><div style="font-size:18px;font-weight:700;color:#1a3a5c">Relatório de Adiantamentos</div>
@@ -695,7 +791,6 @@ function exportarPDF() {
       </table>
     </div>`}).join('')}
   </div>`;
-
   mostrarPreview(previewHtml, () => {
     compartilharPDF(doc.output('blob'), `adiantamentos-${now.replace(/\//g,'-')}.pdf`);
   });
@@ -715,19 +810,15 @@ function exportarPDFPessoa(id) {
   const now = hoje(); const sal = saldoP(p);
   const salTxt = sal>0?`${fmt(sal)} a receber`:sal<0?`Positivo ${fmt(Math.abs(sal))}`:'Quitado';
   const salColor = sal>0?[185,28,28]:sal<0?[124,58,237]:[21,128,61];
-  // Cabeçalho
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(148,163,184);
   doc.text(now, 40, 22);
   doc.setFontSize(22); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,92);
   doc.text(p.nome, 40, 46);
-  // SALDO + valor na mesma linha que o nome
   doc.setFontSize(15); doc.setFont('helvetica','bold');
   doc.setTextColor(...salColor);
   doc.text(`SALDO  ${salTxt}`, 555, 46, {align:'right'});
-  // Linha divisória
   doc.setDrawColor(200,210,220); doc.setLineWidth(0.5);
   doc.line(40, 54, 555, 54);
-  // Boxes adiantado / recebido
   doc.setFillColor(219,234,254); doc.roundedRect(40,64,240,38,4,4,'F');
   doc.setFillColor(220,252,231); doc.roundedRect(290,64,265,38,4,4,'F');
   doc.setFontSize(8); doc.setFont('helvetica','bold');
@@ -773,10 +864,8 @@ function exportarPDFPessoa(id) {
 }
 
 function mostrarPreview(htmlContent, gerarPDF) {
-  // Remove preview anterior se existir
   const old = document.getElementById('pdfPreviewOverlay');
   if (old) old.remove();
-
   const overlay = document.createElement('div');
   overlay.id = 'pdfPreviewOverlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
@@ -789,10 +878,7 @@ function mostrarPreview(htmlContent, gerarPDF) {
     <div style="overflow:auto;flex:1;padding:16px;">${htmlContent}</div>`;
   document.body.appendChild(overlay);
   document.getElementById('btnFecharPreview').onclick = () => overlay.remove();
-  document.getElementById('btnCompartilharPDF').onclick = () => {
-    gerarPDF();
-    overlay.remove();
-  };
+  document.getElementById('btnCompartilharPDF').onclick = () => { gerarPDF(); overlay.remove(); };
 }
 
 function compartilharPDF(blob, fileName) {
@@ -872,7 +958,6 @@ function showToast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t?.remove(), 2200);
 }
-// ──────────────────────────────────────────────────────────────
 
 // Calculadora
 let calcExpr = '', calcCurrent = '0', calcNewNum = true;
@@ -885,7 +970,6 @@ function toggleCalc() {
 function calcAction(btn) {
   const exprEl = document.getElementById('calcExpr');
   const resEl = document.getElementById('calcResult');
-
   if (btn==='C') { calcExpr=''; calcCurrent='0'; calcNewNum=true; }
   else if (btn==='±') { calcCurrent = (parseFloat(calcCurrent)*-1).toString(); }
   else if (btn==='%') { calcCurrent = (parseFloat(calcCurrent)/100).toString(); }
@@ -911,7 +995,6 @@ function calcAction(btn) {
     if (calcNewNum) { calcCurrent=btn; calcNewNum=false; }
     else calcCurrent = calcCurrent==='0' ? btn : calcCurrent+btn;
   }
-
   if (exprEl) exprEl.textContent = calcExpr;
   if (resEl) resEl.textContent = parseFloat(calcCurrent).toLocaleString('pt-BR');
 }
@@ -929,11 +1012,8 @@ let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const header = document.querySelector('.header');
   const current = window.scrollY;
-  if (current > lastScroll && current > 50) {
-    header.classList.add('hidden');
-  } else {
-    header.classList.remove('hidden');
-  }
+  if (current > lastScroll && current > 50) header.classList.add('hidden');
+  else header.classList.remove('hidden');
   lastScroll = current;
 }, { passive: true });
 
