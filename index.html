@@ -848,7 +848,11 @@ function saveEditLanc() {
     const [ano, mes, dia] = dataRaw.split('-');
     dataFmt = `${dia}/${mes}/${ano}`;
   }
-  if (l) { l.descricao=desc; l.valor=val; l.data=dataFmt; l.ts=Date.now(); }
+  if (l) {
+    const mudou = l.descricao !== desc || l.valor !== val || l.data !== dataFmt;
+    l.descricao = desc; l.valor = val; l.data = dataFmt;
+    if (mudou) l.ts = Date.now();
+  }
   save(); closeModal(); render();
 }
 function toggleMenuPessoa(id) {
