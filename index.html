@@ -518,6 +518,9 @@ function renderPessoas(el) {
   }
 
   const listaHTML = pessoasFiltradas.slice().sort((a, b) => {
+    const qA = saldoP(a) === 0 ? 1 : 0;
+    const qB = saldoP(b) === 0 ? 1 : 0;
+    if (qA !== qB) return qA - qB;
     const tsA = a.lancamentos.length ? Math.max.apply(null, a.lancamentos.map(function(l){return l.ts||0;})) : 0;
     const tsB = b.lancamentos.length ? Math.max.apply(null, b.lancamentos.map(function(l){return l.ts||0;})) : 0;
     return tsB - tsA;
