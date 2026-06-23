@@ -667,7 +667,11 @@ function renderDetalhe(el) {
 
 function renderResumo(el) {
   if (state.pessoas.length===0) { el.innerHTML=`<div class="empty"><div class="icon">📊</div><p>Nenhum dado ainda.</p></div>`; return; }
-  const rows = state.pessoas.map(p => {
+  const rows = state.pessoas.slice().sort((a,b) => {
+    const qA = saldoP(a) === 0 ? 1 : 0;
+    const qB = saldoP(b) === 0 ? 1 : 0;
+    return qA - qB;
+  }).map(p => {
     const saldo = saldoP(p);
     const { cls, label } = saldoInfo(saldo);
     return `<div class="resumo-row">
