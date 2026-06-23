@@ -570,7 +570,16 @@ function renderDetalhe(el) {
   if (!p) { currentPessoa=null; render(); return; }
   const saldo = saldoP(p);
   const { cls, label, desc } = saldoInfo(saldo);
-  const lancs = p.lancamentos.slice().sort((a, b) => (a.ts||0) - (b.ts||0));
+  const lancs = p.lancamentos.slice().sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
 
   const haverBanner = saldo < 0 ? `
     <div class="haver-banner">
@@ -952,7 +961,16 @@ function exportarPDFPessoa(id) {
   const salColor = sal > 0 ? [185,28,28] : sal < 0 ? [124,58,237] : [21,128,61];
   const cor1 = isFluxo ? [180,83,9] : [29,78,216];
   const bg1 = isFluxo ? [254,243,199] : [219,234,254];
-  const lancs = [...p.lancamentos].sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  const lancs = [...p.lancamentos].sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
 
   const fmtS = function(v) { return fmt(v).replace(',00',''); };
 
@@ -1121,12 +1139,21 @@ function exportarPNGPessoa(id) {
   const label2 = isFluxo ? 'ENTRADA' : 'RECEBIDO';
   const cor1 = isFluxo ? '#f59e0b' : '#4d8ef0';
   const bg1  = isFluxo ? '#3a2a0a' : '#1e3a6e';
-  const lancs = p.lancamentos.slice().sort((a,b) => (a.ts||0)-(b.ts||0));
+  const lancs = p.lancamentos.slice().sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
 
-  const W = 1100;
-  const PAD = 44;
-  const LINE_H = 70;
-  const HEADER_H = 240;
+  const W = 800;
+  const PAD = 36;
+  const LINE_H = 52;
+  const HEADER_H = 180;
   const BODY_H = lancs.length * LINE_H + 60;
   const H = HEADER_H + BODY_H + 60;
 
@@ -1140,14 +1167,14 @@ function exportarPNGPessoa(id) {
 
   // Data pequena
   ctx.fillStyle = '#6b7280';
-  ctx.font = 'bold 20px sans-serif';
+  ctx.font = 'bold 14px sans-serif';
   var dataW = ctx.measureText(hoje() + '  ').width;
-  ctx.fillText(hoje(), PAD, 72);
+  ctx.fillText(hoje(), PAD, 54);
 
   // Nome maior
   ctx.fillStyle = '#111827';
-  ctx.font = 'bold 36px sans-serif';
-  ctx.fillText(p.nome, PAD + dataW, 72);
+  ctx.font = 'bold 17px sans-serif';
+  ctx.fillText(p.nome, PAD + dataW, 54);
 
   const salLabel = sal > 0 ? fmtS(sal) + ' a receber' : sal < 0 ? fmtS(Math.abs(sal)) + ' saldo positivo' : 'Quitado';
   const salCor   = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
@@ -1155,11 +1182,11 @@ function exportarPNGPessoa(id) {
   // Linha divisória
   ctx.strokeStyle = '#e5e7eb';
   ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(PAD, 90); ctx.lineTo(W-PAD, 90); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD, 68); ctx.lineTo(W-PAD, 68); ctx.stroke();
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW3 = (W - PAD*2 - 24) / 3;
-  var bY = 100, bH = 80;
+  var bY = 76, bH = 58;
 
   // Box 1 — SAÍDA
   var cor1bg = isFluxo ? '#fef3c7' : '#dbeafe';
@@ -1167,31 +1194,31 @@ function exportarPNGPessoa(id) {
   ctx.fillStyle = cor1bg;
   roundRect(ctx, PAD, bY, bW3, bH, 8);
   ctx.fillStyle = cor1tx;
+  ctx.font = 'bold 16px sans-serif';
+  ctx.fillText(label1, PAD+10, bY+16);
   ctx.font = 'bold 24px sans-serif';
-  ctx.fillText(label1, PAD+12, bY+24);
-  ctx.font = 'bold 34px sans-serif';
-  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+62);
+  ctx.fillText(fmtS(totalEntradas(p)), PAD+10, bY+44);
 
   // Box 2 — ENTRADA
   ctx.fillStyle = '#dcfce7';
   roundRect(ctx, PAD+bW3+12, bY, bW3, bH, 8);
   ctx.fillStyle = '#15803d';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(label2, PAD+bW3+12, bY+24);
-  ctx.font = 'bold 34px sans-serif';
-  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+12, bY+62);
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText(label2, PAD+bW3+10, bY+16);
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+10, bY+44);
 
   // Box 3 — SALDO
   var salBg = sal > 0 ? '#fee2e2' : sal < 0 ? '#ede9fe' : '#dcfce7';
   ctx.fillStyle = salBg;
   roundRect(ctx, PAD+bW3*2+24, bY, bW3, bH, 8);
   ctx.fillStyle = salCor;
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText('SALDO', PAD+bW3*2+12, bY+24);
-  ctx.font = 'bold 34px sans-serif';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.fillText('SALDO', PAD+bW3*2+10, bY+16);
+  ctx.font = 'bold 24px sans-serif';
   // Valor do saldo
   var salValor = sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado';
-  ctx.fillText(salValor, PAD+bW3*2+12, bY+62);
+  ctx.fillText(salValor, PAD+bW3*2+10, bY+44);
 
   // Seção movimentações
   let y = HEADER_H + 14;
@@ -1202,7 +1229,7 @@ function exportarPNGPessoa(id) {
 
   // Lançamentos
   // Pré-calcular posição de alinhamento decimal
-  ctx.font = 'bold 34px monospace';
+  ctx.font = 'bold 22px monospace';
   const COL_SINAL = PAD + 18;
   const COL_RS    = COL_SINAL + ctx.measureText('+').width + 4;
   // Largura máxima da parte inteira (antes do ponto) entre todos os lançamentos
@@ -1231,7 +1258,7 @@ function exportarPNGPessoa(id) {
 
     // Valor à esquerda — alinhado pelo decimal
     ctx.fillStyle = corLanc;
-    ctx.font = 'bold 30px monospace';
+    ctx.font = 'bold 20px monospace';
     var fmtd = fmtS(l.valor);
     var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
     var partes = semRS.split(',');
@@ -1255,7 +1282,7 @@ function exportarPNGPessoa(id) {
     // Data curta no fim da linha
     var dataCorta = l.data ? l.data.slice(0,5) : '';
     ctx.fillStyle = '#374151';
-    ctx.font = 'bold 20px sans-serif';
+    ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText(dataCorta, W-PAD, y+27);
     ctx.textAlign = 'left';
@@ -1263,7 +1290,7 @@ function exportarPNGPessoa(id) {
     // Descrição à esquerda, logo após a coluna decimal
     var colDescStart = COL_VIRGULA + ctx.measureText(',00').width + 36;
     ctx.fillStyle = '#111827';
-    ctx.font = '500 27px sans-serif';
+    ctx.font = '500 19px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(truncate(ctx, l.descricao, W - PAD - colDescStart - 10), colDescStart, y+27);
 
@@ -1277,7 +1304,7 @@ function exportarPNGPessoa(id) {
   ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke();
   y += 28;
   ctx.fillStyle = salCor;
-  ctx.font = 'bold 34px monospace';
+  ctx.font = 'bold 22px monospace';
   ctx.fillText(salLabel, PAD, y);
 
   // Exportar
