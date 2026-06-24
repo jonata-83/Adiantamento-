@@ -186,10 +186,10 @@
   .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
   .calc-btn { padding: 14px 0; border: none; border-radius: var(--radius-sm); font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: opacity 0.1s; }
   .calc-btn:active { opacity: 0.7; }
-  .calc-num { background: #2a2a2a; color: var(--text); }
-  .calc-op { background: #1e3a6e; color: #4d8ef0; }
-  .calc-clear { background: #3a1a1a; color: #f87171; }
-  .calc-eq { background: var(--accent); color: #fff; }
+  .calc-num   { background: #2a2a2a; color: var(--text); }
+  .calc-op    { background: #1e3a6e; color: #4d8ef0; font-size: 26px; line-height: 1; }
+  .calc-clear { background: #3a1a1a; color: #f87171; font-size: 22px; }
+  .calc-eq    { background: var(--accent); color: #fff; font-size: 26px; line-height: 1; }
   .calc-usar { width: 100%; padding: 11px; background: #1a3a26; color: #4ade80; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 10px; }
 
   .resumo-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; animation: fadeUp 0.2s ease both; }
@@ -830,11 +830,41 @@ function editLanc(pessoaId, lancId) {
     const [dia, mes, ano] = d.split('/');
     return `${ano}-${mes}-${dia}`;
   };
+  calcExpr = ''; calcCurrent = String(l.valor); calcNewNum = true;
   showModal(title, `
     <div class="input-label">Descrição</div>
     <input class="input" id="inDesc" value="${esc(l.descricao)}" autocomplete="off">
     <div class="input-label">Valor (R$)</div>
-    <input class="input" id="inVal" type="number" min="0" step="0.01" value="${l.valor}">
+    <input class="input" id="inVal" placeholder="Ex: 500" type="number" min="0" step="0.01" value="${l.valor}" readonly style="cursor:pointer" onclick="toggleCalc()">
+    <div id="calcWrap" style="display:none">
+      <div class="calc-display">
+        <div class="calc-expr" id="calcExpr"></div>
+        <div class="calc-result" id="calcResult">${l.valor.toLocaleString('pt-BR')}</div>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-clear" onclick="calcAction('C')">C</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('±')">±</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('%')">%</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('⌫')">⌫</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('7')">7</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('8')">8</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('9')">9</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('÷')">÷</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('4')">4</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('5')">5</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('6')">6</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('×')">×</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('1')">1</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('2')">2</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('3')">3</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('-')">−</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('0')">0</button>
+        <button class="calc-btn calc-num"   onclick="calcAction(',')">.</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('+')">＋</button>
+        <button class="calc-btn calc-eq"    onclick="calcAction('=')">=</button>
+      </div>
+      <button class="calc-usar" onclick="usarResultado()">✅ Usar este valor</button>
+    </div>
     <div class="input-label">Data</div>
     <input class="input" id="inData" type="date" value="${dataParaInput(l.data)}">
     <div class="modal-actions">
@@ -987,38 +1017,38 @@ function exportarPDFPessoa(id) {
 
   // Cabeçalho: data pequena + nome grande
   doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
-  doc.text(now, 40, 22);
-  doc.setFontSize(20); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-  doc.text(p.nome, 40, 44);
+  doc.text(now, 40, 26);
+  doc.setFontSize(26); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+  doc.text(p.nome, 40, 52);
   // Linha divisória
   doc.setDrawColor(229,231,235); doc.setLineWidth(0.8);
-  doc.line(40, 52, 555, 52);
+  doc.line(40, 62, 555, 62);
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW = (555 - 40 - 16) / 3;
-  var bY = 58, bH = 38;
+  var bY = 70, bH = 50;
   // Box 1
   doc.setFillColor(bg1[0],bg1[1],bg1[2]); doc.roundedRect(40, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(7); doc.setTextColor(cor1[0],cor1[1],cor1[2]); doc.text(box1Label, 48, bY+12);
-  doc.setFontSize(13); doc.text(fmtS(totalEntradas(p)), 48, bY+30);
+  doc.setFontSize(9); doc.setTextColor(cor1[0],cor1[1],cor1[2]); doc.text(box1Label, 48, bY+14);
+  doc.setFontSize(16); doc.text(fmtS(totalEntradas(p)), 48, bY+38);
   // Box 2
   doc.setFillColor(220,252,231); doc.roundedRect(40+bW+8, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(7); doc.setTextColor(21,128,61); doc.text(box2Label, 48+bW+8, bY+12);
-  doc.setFontSize(13); doc.text(fmtS(totalPagamentos(p)), 48+bW+8, bY+30);
+  doc.setFontSize(9); doc.setTextColor(21,128,61); doc.text(box2Label, 48+bW+8, bY+14);
+  doc.setFontSize(16); doc.text(fmtS(totalPagamentos(p)), 48+bW+8, bY+38);
   // Box 3 - SALDO
   var salBg = sal > 0 ? [254,226,226] : sal < 0 ? [237,233,254] : [220,252,231];
   doc.setFillColor(salBg[0],salBg[1],salBg[2]); doc.roundedRect(40+bW*2+16, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(7); doc.setTextColor(salColor[0],salColor[1],salColor[2]); doc.text('SALDO', 48+bW*2+16, bY+12);
-  doc.setFontSize(13); doc.text(sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado', 48+bW*2+16, bY+30);
+  doc.setFontSize(9); doc.setTextColor(salColor[0],salColor[1],salColor[2]); doc.text('SALDO', 48+bW*2+16, bY+14);
+  doc.setFontSize(16); doc.text(sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado', 48+bW*2+16, bY+38);
 
   // Label MOVIMENTAÇÕES
-  var y = bY + bH + 12;
-  doc.setFontSize(8); doc.setFont('helvetica','bold'); doc.setTextColor(156,163,175);
+  var y = bY + bH + 14;
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(156,163,175);
   doc.text('MOVIMENTAÇÕES', 40, y);
-  y += 8;
+  y += 10;
 
   // Calcular coluna decimal (largura máxima da parte inteira)
-  doc.setFontSize(10); doc.setFont('helvetica','bold');
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
   var maxW = 0;
   lancs.forEach(function(l) {
     var s = fmtS(l.valor).replace('R$\u00a0','').replace('R$ ','').trim().split(',')[0];
@@ -1028,9 +1058,9 @@ function exportarPDFPessoa(id) {
   var COL_SINAL = 46;
   var COL_RS    = COL_SINAL + doc.getTextWidth('+') + 2;
   var COL_VIRGULA = COL_RS + doc.getTextWidth('R$ ') + maxW + 2;
-  var COL_DESC = COL_VIRGULA + doc.getTextWidth(',00') + 10;
+  var COL_DESC = COL_VIRGULA + doc.getTextWidth(',00') + 12;
   var COL_DATA = 555;
-  var ROW_H = 16;
+  var ROW_H = 20;
 
   lancs.forEach(function(l, i) {
     var isEnt = l.tipo === 'entrada';
@@ -1049,17 +1079,17 @@ function exportarPDFPessoa(id) {
       doc.rect(40, y+1, 515, ROW_H, 'F');
     }
 
-    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
     doc.setTextColor(corLanc[0],corLanc[1],corLanc[2]);
     // Sinal
-    doc.text(sinal, COL_SINAL, y+11);
+    doc.text(sinal, COL_SINAL, y+14);
     // R$
-    doc.text('R$', COL_RS, y+11);
+    doc.text('R$', COL_RS, y+14);
     // Parte inteira alinhada à direita da coluna
     var intW = doc.getTextWidth(parteInt);
-    doc.text(parteInt, COL_VIRGULA - intW, y+11);
+    doc.text(parteInt, COL_VIRGULA - intW, y+14);
     // Parte decimal
-    if(parteDec) doc.text(parteDec, COL_VIRGULA, y+11);
+    if(parteDec) doc.text(parteDec, COL_VIRGULA, y+14);
 
     // Descrição
     doc.setTextColor(17,24,39);
@@ -1067,21 +1097,21 @@ function exportarPDFPessoa(id) {
     var desc = l.descricao;
     while(desc.length > 0 && doc.getTextWidth(desc) > maxDescW) desc = desc.slice(0,-1);
     if(desc.length < l.descricao.length) desc += '...';
-    doc.text(desc, COL_DESC, y+11);
+    doc.text(desc, COL_DESC, y+14);
 
     // Data
     doc.setTextColor(55,65,81);
-    doc.text(dataCorta, COL_DATA, y+11, {align:'right'});
+    doc.text(dataCorta, COL_DATA, y+14, {align:'right'});
 
     y += ROW_H;
   });
 
   // Linha e saldo final
-  y += 4;
+  y += 6;
   doc.setDrawColor(229,231,235); doc.setLineWidth(0.5);
   doc.line(40, y, 555, y);
-  y += 14;
-  doc.setFontSize(12); doc.setTextColor(salColor[0],salColor[1],salColor[2]);
+  y += 18;
+  doc.setFontSize(15); doc.setTextColor(salColor[0],salColor[1],salColor[2]);
   doc.text(salTxt, 40, y);
 
   // Preview HTML com mesmo estilo
@@ -1161,16 +1191,18 @@ function exportarPNGPessoa(id) {
     return (a.ts||0) - (b.ts||0);
   });
 
-  const W = 800;
-  const PAD = 36;
-  const LINE_H = 52;
-  const HEADER_H = 180;
-  const BODY_H = lancs.length * LINE_H + 60;
-  const H = HEADER_H + BODY_H + 60;
+  const W = 900;
+  const PAD = 40;
+  const LINE_H = 64;
+  const HEADER_H = 210;
+  const BODY_H = lancs.length * LINE_H + 70;
+  const H = HEADER_H + BODY_H + 70;
 
   const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
+  canvas.width = W*2; canvas.height = H*2;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
   const ctx = canvas.getContext('2d');
+  ctx.scale(2,2);
 
   // Fundo branco
   ctx.fillStyle = '#ffffff';
@@ -1178,14 +1210,14 @@ function exportarPNGPessoa(id) {
 
   // Data pequena
   ctx.fillStyle = '#6b7280';
-  ctx.font = 'bold 14px sans-serif';
+  ctx.font = 'bold 18px sans-serif';
   var dataW = ctx.measureText(hoje() + '  ').width;
-  ctx.fillText(hoje(), PAD, 54);
+  ctx.fillText(hoje(), PAD, 60);
 
   // Nome maior
   ctx.fillStyle = '#111827';
-  ctx.font = 'bold 17px sans-serif';
-  ctx.fillText(p.nome, PAD + dataW, 54);
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText(p.nome, PAD + dataW, 60);
 
   const salLabel = sal > 0 ? fmtS(sal) + ' a receber' : sal < 0 ? fmtS(Math.abs(sal)) + ' saldo positivo' : 'Quitado';
   const salCor   = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
@@ -1193,62 +1225,65 @@ function exportarPNGPessoa(id) {
   // Linha divisória
   ctx.strokeStyle = '#e5e7eb';
   ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(PAD, 68); ctx.lineTo(W-PAD, 68); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(PAD, 76); ctx.lineTo(W-PAD, 76); ctx.stroke();
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW3 = (W - PAD*2 - 24) / 3;
-  var bY = 76, bH = 58;
+  var bY = 86, bH = 72;
 
-  // Box 1 — SAÍDA
+  // Box 1
   var cor1bg = isFluxo ? '#fef3c7' : '#dbeafe';
   var cor1tx = isFluxo ? '#b45309' : '#1d4ed8';
   ctx.fillStyle = cor1bg;
   roundRect(ctx, PAD, bY, bW3, bH, 8);
   ctx.fillStyle = cor1tx;
-  ctx.font = 'bold 16px sans-serif';
-  ctx.fillText(label1, PAD+10, bY+16);
-  ctx.font = 'bold 24px sans-serif';
-  ctx.fillText(fmtS(totalEntradas(p)), PAD+10, bY+44);
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(label1, PAD+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+54);
 
-  // Box 2 — ENTRADA
+  // Box 2
   ctx.fillStyle = '#dcfce7';
   roundRect(ctx, PAD+bW3+12, bY, bW3, bH, 8);
   ctx.fillStyle = '#15803d';
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillText(label2, PAD+bW3+10, bY+16);
-  ctx.font = 'bold 24px sans-serif';
-  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+10, bY+44);
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(label2, PAD+bW3+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+12, bY+54);
 
   // Box 3 — SALDO
   var salBg = sal > 0 ? '#fee2e2' : sal < 0 ? '#ede9fe' : '#dcfce7';
   ctx.fillStyle = salBg;
   roundRect(ctx, PAD+bW3*2+24, bY, bW3, bH, 8);
   ctx.fillStyle = salCor;
-  ctx.font = 'bold 14px sans-serif';
-  ctx.fillText('SALDO', PAD+bW3*2+10, bY+16);
-  ctx.font = 'bold 24px sans-serif';
-  // Valor do saldo
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
   var salValor = sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado';
-  ctx.fillText(salValor, PAD+bW3*2+10, bY+44);
+  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+54);
 
   // Seção movimentações
-  let y = HEADER_H + 14;
-  ctx.fillStyle = '#9ca3af';
-  ctx.font = 'bold 28px sans-serif';
+  let y = HEADER_H + 10;
+  ctx.fillStyle = '#b0b5b2';
+  ctx.font = 'bold 13px sans-serif';
   ctx.fillText('MOVIMENTAÇÕES', PAD, y);
-  y += 24;
+  y += 18;
+
+  // linha fina
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
+  y += 10;
 
   // Lançamentos
-  // Pré-calcular posição de alinhamento decimal
-  ctx.font = 'bold 22px monospace';
+  ctx.font = 'bold 24px monospace';
   const COL_SINAL = PAD + 18;
   const COL_RS    = COL_SINAL + ctx.measureText('+').width + 4;
-  // Largura máxima da parte inteira (antes do ponto) entre todos os lançamentos
   var maxInteiroW = 0;
   lancs.forEach(function(l) {
-    var fmtd = fmtS(l.valor); // ex: "R$ 1.000,00"
-    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim(); // "1.000,00"
-    var parteInteira = semRS.split(',')[0]; // "1.000"
+    var fmtd = fmtS(l.valor);
+    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+    var parteInteira = semRS.split(',')[0];
     var w = ctx.measureText(parteInteira).width;
     if(w > maxInteiroW) maxInteiroW = w;
   });
@@ -1269,7 +1304,7 @@ function exportarPNGPessoa(id) {
 
     // Valor à esquerda — alinhado pelo decimal
     ctx.fillStyle = corLanc;
-    ctx.font = 'bold 20px monospace';
+    ctx.font = 'bold 24px monospace';
     var fmtd = fmtS(l.valor);
     var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
     var partes = semRS.split(',');
@@ -1278,32 +1313,31 @@ function exportarPNGPessoa(id) {
     var sinal = isEnt ? '+' : '-';
     // Sinal
     ctx.textAlign = 'left';
-    ctx.fillText(sinal, COL_SINAL, y+27);
+    ctx.fillText(sinal, COL_SINAL, y+36);
     // R$
-    ctx.fillText('R$', COL_RS, y+27);
+    ctx.fillText('R$', COL_RS, y+36);
     // Parte inteira — alinhada à direita na COL_VIRGULA
     ctx.textAlign = 'right';
-    ctx.fillText(parteInt, COL_VIRGULA, y+27);
+    ctx.fillText(parteInt, COL_VIRGULA, y+36);
     // Parte decimal — alinhada à esquerda da COL_VIRGULA
     ctx.textAlign = 'left';
-    ctx.fillText(parteDec, COL_VIRGULA, y+27);
+    ctx.fillText(parteDec, COL_VIRGULA, y+36);
     ctx.textAlign = 'left';
 
-    // Meta (tipo · data) abaixo do valor — REMOVIDO
     // Data curta no fim da linha
     var dataCorta = l.data ? l.data.slice(0,5) : '';
     ctx.fillStyle = '#374151';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(dataCorta, W-PAD, y+27);
+    ctx.fillText(dataCorta, W-PAD, y+36);
     ctx.textAlign = 'left';
 
     // Descrição à esquerda, logo após a coluna decimal
     var colDescStart = COL_VIRGULA + ctx.measureText(',00').width + 36;
     ctx.fillStyle = '#111827';
-    ctx.font = '500 19px sans-serif';
+    ctx.font = '500 22px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(truncate(ctx, l.descricao, W - PAD - colDescStart - 10), colDescStart, y+27);
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - colDescStart - 10), colDescStart, y+36);
 
     y += LINE_H;
   });
@@ -1315,7 +1349,7 @@ function exportarPNGPessoa(id) {
   ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke();
   y += 28;
   ctx.fillStyle = salCor;
-  ctx.font = 'bold 22px monospace';
+  ctx.font = 'bold 26px monospace';
   ctx.fillText(salLabel, PAD, y);
 
   // Exportar
