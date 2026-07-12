@@ -1,6 +1,7 @@
-const CACHE_NAME = 'adiantamentos-v4';
+const CACHE_NAME = 'adiantamentos-v5';
 const urlsToCache = [
   '/Adiantamento-/index.html',
+  '/Adiantamento-/adiantamentos.html',
   '/Adiantamento-/manifest.json',
   '/Adiantamento-/logo192.png',
   '/Adiantamento-/logo512.png'
@@ -14,7 +15,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Ao ativar, apaga TODOS os caches antigos (v3 e anteriores) e assume o controle
+// Ao ativar, apaga TODOS os caches antigos (v3, v4...) e assume o controle
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -30,8 +31,10 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => {});
+        if (response && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy)).catch(() => {});
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
