@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Adiantamentos">
+<meta name="theme-color" content="#1a3a5c">
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+</script>
+<title>💰 Adiantamentos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #1a1a1a;
+    --surface: #242424;
+    --primary: #90b4e8;
+    --accent: #4d8ef0;
+    --accent-light: #1e3a6e;
+    --green: #4ade80;
+    --green-light: #1a3a26;
+    --red: #f87171;
+    --red-light: #3a1a1a;
+    --orange: #f59e0b;
+    --orange-light: #3a2a0a;
+    --text: #f0f0f0;
+    --text-mid: #a0a0a0;
+    --text-soft: #606060;
+    --border: #333333;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 2px 16px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a3a5c 0%, #2563eb 100%);
+    padding: 36px 20px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  .header.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .header-emoji { font-size: 22px; }
+  .header-label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: rgba(255,255,255,0.5); }
+
+  .float-card {
+    background: rgba(0,0,0,0.25);
+    border-radius: 16px;
+    padding: 12px 16px;
+    margin: 0 0 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .float-card .fc-left .fc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #6080b0; margin-bottom: 2px; }
+  .float-card .fc-left .fc-val { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 700; color: #fff; }
+  .float-card .fc-right { text-align: right; }
+  .float-card .fc-right .fc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px; color: #6080b0; margin-bottom: 2px; }
+  .float-card .fc-right .fc-val2 { font-family: 'DM Mono', monospace; font-size: 13px; color: #4d8ef0; font-weight: 500; }
+
+  .tabs {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .tab { flex: 1; background: transparent; border: none; border-radius: 50px; padding: 8px 0; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.4); cursor: pointer; text-align: center; transition: all 0.2s; }
+  .tab.active { color: #fff; font-weight: 800; border-bottom: 2px solid #fff; border-radius: 0; }
+
+  .pessoa-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; cursor: pointer; transition: transform 0.15s; animation: fadeUp 0.2s ease both; }
+  .pessoa-card:active { transform: scale(0.98); }
+  .pessoa-top { display: flex; justify-content: space-between; align-items: center; }
+  .pessoa-nome { font-weight: 700; font-size: 16px; }
+  .pessoa-saldo { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; }
+  .saldo-devedor { color: var(--red); }
+  .saldo-zerado { color: var(--green); }
+  .saldo-haver { color: var(--purple); }
+  .pessoa-bottom { display: flex; gap: 14px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .pessoa-tag { font-size: 13px; font-weight: 700; padding: 0; border-radius: 0; background: none !important; }
+  .tag-entrada { color: var(--accent); }
+  .tag-pagamento { color: var(--green); }
+  .tag-haver { color: var(--purple); }
+  .arrow { color: var(--text-soft); font-size: 18px; margin-left: 4px; }
+
+  .detail-header { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; }
+  .detail-back { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--accent); font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+  .detail-nome { font-size: 20px; font-weight: 700; }
+  .detail-saldo-label { font-size: 11px; color: var(--text-soft); text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; margin-bottom: 2px; }
+  .detail-saldo { font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 500; }
+  .detail-stats { display: flex; gap: 10px; margin-top: 12px; }
+  .stat-box { flex: 1; border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stat-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
+  .stat-val { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; margin-top: 2px; }
+  .stat-entrada { background: var(--accent-light); color: var(--accent); }
+  .stat-pagamento { background: var(--green-light); color: var(--green); }
+
+  .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-soft); padding: 4px 2px 2px; }
+  .lanc-card { background: var(--surface); border-radius: var(--radius-sm); padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 6px rgba(0,0,0,0.05); animation: fadeUp 0.2s ease both; border-left: 3px solid transparent; cursor: pointer; user-select: none; transition: background 0.1s; }
+  .lanc-card.pressing { background: #2e2e2e; }
+  .pessoa-card.pressing { background: #2e2e2e; }
+  .lanc-entrada { border-left-color: var(--accent); }
+  .lanc-pagamento { border-left-color: var(--green); }
+  .lanc-left { display: flex; align-items: center; gap: 10px; }
+  .lanc-icon { font-size: 17px; }
+  .lanc-desc { font-size: 13px; font-weight: 500; max-width: 160px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+  .lanc-meta { font-size: 11px; color: #a0b8d0; margin-top: 2px; font-weight: 500; }
+  .lanc-right { display: flex; align-items: center; gap: 8px; }
+  .lanc-val-entrada { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--accent); font-weight: 500; }
+  .lanc-val-pagamento { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--green); font-weight: 500; }
+  .lanc-btns { display: flex; gap: 4px; }
+
+  .haver-banner {
+    background: var(--purple-light);
+    border: 1.5px solid #c4b5fd;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--purple);
+    font-weight: 600;
+  }
+
+  .btn { border: none; border-radius: 50px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: opacity 0.15s, transform 0.1s; }
+  .btn:active { transform: scale(0.96); opacity: 0.85; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-green { background: var(--green-light); color: var(--green); }
+  .btn-ghost { background: var(--accent-light); color: var(--accent); }
+  .btn-danger { background: var(--red-light); color: var(--red); }
+  .icon-btn { background: var(--bg); border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 13px; flex-shrink: 0; }
+  .icon-btn:active { background: var(--border); }
+
+  .fab-group { position: fixed; bottom: 24px; right: 20px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; z-index: 50; }
+  .fab-main { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 24px; border: none; box-shadow: 0 4px 20px rgba(37,99,235,0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+  .fab-main:active { transform: scale(0.93); }
+  .fab-mini-group { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .fab-mini { display: flex; align-items: center; gap: 10px; cursor: pointer; animation: fadeUp 0.15s ease both; }
+  .fab-mini-btn { width: 42px; height: 42px; border-radius: 50%; border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+  .fab-mini-label { background: rgba(30,41,59,0.85); color: #fff; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 50px; white-space: nowrap; }
+  .fab-entrada-btn { background: var(--accent); color: #fff; }
+  .fab-pagamento-btn { background: var(--green); color: #fff; }
+
+  .empty { text-align: center; padding: 48px 24px; color: var(--text-soft); }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s ease; }
+  .modal { background: #242424; border-radius: 24px 24px 0 0; padding: 24px 22px 40px; width: 100%; max-width: 480px; animation: slideUp 0.25s ease; }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 4px; margin: 0 auto 18px; }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 18px; color: var(--text); }
+  .input { width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px; font-family: 'DM Sans', sans-serif; color: var(--text); background: #1a1a1a; outline: none; margin-bottom: 10px; transition: border-color 0.15s; }
+  .input:focus { border-color: var(--accent); background: #242424; }
+  .input-label { font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .modal-actions .btn { flex: 1; padding: 13px; font-size: 14px; border-radius: var(--radius-sm); }
+  .confirm-text { font-size: 14px; color: var(--text-mid); margin-bottom: 20px; line-height: 1.5; }
+
+  .content { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 90px; }
+
+  .calc-display { background: #111; border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 8px; text-align: right; }
+  .calc-expr { font-size: 12px; color: var(--text-soft); min-height: 16px; font-family: 'DM Mono', monospace; }
+  .calc-result { font-family: 'DM Mono', monospace; font-size: 26px; color: var(--text); font-weight: 500; }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+  .calc-btn { padding: 14px 0; border: none; border-radius: var(--radius-sm); font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: opacity 0.1s; }
+  .calc-btn:active { opacity: 0.7; }
+  .calc-num   { background: #2a2a2a; color: var(--text); }
+  .calc-op    { background: #1e3a6e; color: #4d8ef0; font-size: 26px; line-height: 1; }
+  .calc-clear { background: #3a1a1a; color: #f87171; font-size: 22px; }
+  .calc-eq    { background: var(--accent); color: #fff; font-size: 26px; line-height: 1; }
+  .calc-usar { width: 100%; padding: 11px; background: #1a3a26; color: #4ade80; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-bottom: 10px; }
+
+  .resumo-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; animation: fadeUp 0.2s ease both; }
+  .resumo-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .resumo-row:last-child { border-bottom: none; }
+  .resumo-nome { font-size: 14px; font-weight: 600; }
+  .resumo-vals { text-align: right; }
+  .resumo-saldo { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; }
+  .resumo-detail { font-size: 11px; color: var(--text-soft); margin-top: 1px; }
+  .resumo-total { background: var(--accent-light); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .resumo-total-label { font-weight: 700; color: var(--primary); font-size: 14px; }
+  .resumo-total-val { font-family: 'DM Mono', monospace; font-weight: 700; color: var(--primary); font-size: 18px; }
+
+  /* Backup/Restore banner */
+  .backup-bar {
+    background: #1a2a1a;
+    border: 1.5px solid #2a4a2a;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .backup-bar-header {
+    padding: 11px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    gap: 10px;
+  }
+  .backup-bar-left { display: flex; align-items: center; gap: 8px; }
+  .backup-bar-label { font-size: 12px; font-weight: 700; color: #4ade80; }
+  .backup-bar-sub { font-size: 11px; color: #606060; margin-top: 1px; }
+  .backup-bar-body {
+    padding: 0 14px 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .backup-bar-body.hidden { display: none; }
+  .backup-chevron { color: #4ade80; font-size: 14px; transition: transform 0.2s; flex-shrink: 0; }
+  .backup-chevron.open { transform: rotate(180deg); }
+  .backup-btn { border: none; border-radius: 50px; padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; flex: 1; }
+  .backup-btn-export { background: #1a3a26; color: #4ade80; }
+  .backup-btn-import { background: #1e3a6e; color: #4d8ef0; }
+
+  /* Busca */
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+  }
+  .search-bar input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+  }
+  .search-bar input::placeholder { color: var(--text-soft); }
+  .search-icon { color: var(--text-soft); font-size: 16px; flex-shrink: 0; }
+  .search-clear { background: none; border: none; color: var(--text-soft); font-size: 18px; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0; }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes slideUp { from { transform:translateY(60px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  @keyframes holdGrow { from { width:0% } to { width:100% } }
+  .hold-bar { position:absolute; bottom:0; left:0; height:3px; background:#f87171; border-radius:0 0 var(--radius) var(--radius); animation: holdGrow linear both; pointer-events:none; }
+  .pessoa-card { position: relative; overflow: hidden; }
+  .silencioso-label { font-size:11px; color:#a0a0a0; margin-left:4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="float-card">
+    <div class="fc-left">
+      <div class="fc-label">A Receber</div>
+      <div class="fc-val" id="totalGeral">R$ 0,00</div>
+    </div>
+    <div class="fc-right" style="display:flex;align-items:center;gap:10px">
+      <div style="text-align:right">
+        <div class="fc-label">Adiantado</div>
+        <div class="fc-val2" id="totalEntradas"></div>
+      </div>
+      <button onclick="toggleValores()" id="btnOlho" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">⊙</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="setTab('pessoas')">Pessoas</div>
+    <div class="tab" onclick="setTab('resumo')">Resumo</div>
+  </div>
+</div>
+
+<div class="content" id="content"></div>
+<div class="fab-group" id="fabGroup"></div>
+
+<div class="overlay" id="overlay" style="display:none" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Input oculto para importar arquivo -->
+<input type="file" id="importFileInput" accept="*/*" style="display:none" onchange="importarJSON(event)">
+
+<script>
+const STORAGE_KEY = 'adiantamentos-v3';
+let state = { pessoas: [], nextId: 1 };
+let currentTab = 'pessoas';
+let currentPessoa = null;
+let fabOpen = false;
+let editTarget = null;
+let backupOpen = false;
+let searchQuery = '';
+let valoresOcultos = false;
+
+function load() {
+  try { const s = localStorage.getItem(STORAGE_KEY); if (s) state = JSON.parse(s); } catch(e) {}
+}
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+const fmt = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const esc = s => String(s !== null && s !== undefined ? s : '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const getPessoa = id => state.pessoas.find(p => p.id === id);
+const nextLancId = p => p.lancamentos.length ? Math.max.apply(null, p.lancamentos.map(function(l){return l.id;})) + 1 : 1;
+const totalEntradas = p => p.lancamentos.filter(l => l.tipo==='entrada').reduce((s,l) => s+l.valor, 0);
+const totalPagamentos = p => p.lancamentos.filter(l => l.tipo==='pagamento').reduce((s,l) => s+l.valor, 0);
+const saldoP = p => totalEntradas(p) - totalPagamentos(p);
+const totalGeralSaldo = () => state.pessoas.reduce((s,p) => {
+  if (p.silencioso) return s;
+  const sal = saldoP(p);
+  return s + (sal > 0 ? sal : 0);
+}, 0);
+const totalGeralEntradas = () => state.pessoas.reduce((s,p) => s+totalEntradas(p), 0);
+
+const hoje = () => {
+  const d = new Date();
+  return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric' });
+};
+
+function saldoInfo(saldo) {
+  if (saldo > 0)  return { cls: 'saldo-devedor', label: fmt(saldo), desc: 'deve a você' };
+  if (saldo < 0)  return { cls: 'saldo-haver',   label: '↑ ' + fmt(Math.abs(saldo)), desc: 'Saldo positivo' };
+  return               { cls: 'saldo-zerado',  label: '✅ Quitado', desc: '' };
+}
+
+// - BACKUP / RESTORE -
+function exportarJSON() {
+  const dataStr = JSON.stringify(state, null, 2);
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const agora = new Date();
+  const stamp = agora.toLocaleDateString('pt-BR').replace(/\//g,'-') + '_' +
+    agora.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}).replace(':','-');
+  const fileName = `adiantamentos-backup-${stamp}.json`;
+
+  // Download direto para a pasta Downloads (igual ao Somar Notas),
+  // sem passar pelo "Abrir com" / compartilhar que bagunçava o arquivo.
+  baixarJSON(blob, fileName);
+}
+
+function baixarJSON(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function abrirImportar() {
+  document.getElementById('importFileInput').click();
+}
+
+function importarJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const dados = JSON.parse(e.target.result);
+      // Validação básica
+      if (!dados.pessoas || !Array.isArray(dados.pessoas)) {
+        showToast('❌ Arquivo inválido!');
+        return;
+      }
+      const total = dados.pessoas.length;
+      const totalLanc = dados.pessoas.reduce((s,p) => s + ((p.lancamentos ? p.lancamentos.length : 0)), 0);
+      // Pede confirmação
+      showModal('📥 Restaurar Backup', `
+        <div class="confirm-text">
+          Arquivo contém <strong>${total} pessoa(s)</strong> e <strong>${totalLanc} lançamento(s)</strong>.<br><br>
+          <span style="color:var(--red)">⚠️ Os dados atuais serão substituídos.</span><br>
+          Tem certeza?
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-primary" onclick="confirmarImport()">Restaurar</button>
+        </div>`);
+      // Guarda temporariamente
+      window._pendingImport = dados;
+    } catch {
+      showToast('❌ Erro ao ler arquivo!');
+    }
+    // Reseta input para permitir reimportar o mesmo arquivo
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function confirmarImport() {
+  if (!window._pendingImport) return;
+  state = window._pendingImport;
+  window._pendingImport = null;
+  save();
+  closeModal();
+  render();
+  showToast('✅ Backup restaurado com sucesso!');
+}
+// -
+
+function toggleValores() {
+  valoresOcultos = !valoresOcultos;
+  document.getElementById('btnOlho').textContent = valoresOcultos ? '⊘' : '⊙';
+  atualizarTotaisHeader();
+}
+
+function atualizarTotaisHeader() {
+  const mask = '••••••';
+  document.getElementById('totalGeral').textContent = valoresOcultos ? mask : fmt(totalGeralSaldo());
+  document.getElementById('totalEntradas').textContent = valoresOcultos ? mask : fmt(totalGeralEntradas());
+}
+
+function render() {
+  atualizarTotaisHeader();
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0&&currentTab==='pessoas')||(i===1&&currentTab==='resumo'));
+  });
+  const content = document.getElementById('content');
+  const fabGroup = document.getElementById('fabGroup');
+  if (currentTab === 'resumo') { fabGroup.innerHTML=''; renderResumo(content); return; }
+  if (currentPessoa !== null) { renderFabDetalhe(fabGroup); renderDetalhe(content); }
+  else { renderFabPessoas(fabGroup); renderPessoas(content); }
+  attachGestures();
+}
+
+function renderFabPessoas(el) {
+  el.innerHTML = `<button class="fab-main" onclick="showModalAddPessoa()">+</button>`;
+}
+function renderFabDetalhe(el) {
+  const pAtual = currentPessoa !== null ? getPessoa(currentPessoa) : null;
+  const isFluxo = (pAtual ? pAtual.modo : undefined) === 'fluxo';
+  if (fabOpen) {
+    el.innerHTML = `
+      <div class="fab-mini-group">
+        <div class="fab-mini" onclick="showModalLanc('entrada')">
+          <div class="fab-mini-label">${isFluxo ? 'Saída' : 'Adiantamento'}</div>
+          <button class="fab-mini-btn fab-entrada-btn" style="${isFluxo?'background:#f87171;font-size:22px;-webkit-text-stroke:0.5px #fff':''}">${isFluxo ? '❯' : '💸'}</button>
+        </div>
+        <div class="fab-mini" onclick="showModalLanc('pagamento')">
+          <div class="fab-mini-label">${isFluxo ? 'Entrada' : 'Pagamento recebido'}</div>
+          <button class="fab-mini-btn fab-pagamento-btn" style="${isFluxo?'font-size:22px;-webkit-text-stroke:0.5px #fff;display:inline-flex;align-items:center;justify-content:center':''}">${isFluxo ? '<span>❮</span>' : '✅'}</button>
+        </div>
+      </div>
+      <button class="fab-main" onclick="toggleFab()" style="background:#64748b;box-shadow:none">✕</button>`;
+  } else {
+    el.innerHTML = `<button class="fab-main" onclick="toggleFab()">+</button>`;
+  }
+}
+function toggleFab() { fabOpen = !fabOpen; render(); }
+
+function toggleBackup() {
+  backupOpen = !backupOpen;
+  const body = document.getElementById('backupBody');
+  const chevron = document.getElementById('backupChevron');
+  if (body) body.classList.toggle('hidden', !backupOpen);
+  if (chevron) chevron.classList.toggle('open', backupOpen);
+}
+
+function renderPessoas(el) {
+  const backupBar = `
+    <div class="backup-bar">
+      <div class="backup-bar-header" onclick="toggleBackup()">
+        <div class="backup-bar-left">
+          <span style="font-size:18px">🛡️</span>
+          <div>
+            <div class="backup-bar-label">Backup dos dados</div>
+            <div class="backup-bar-sub">Exporte antes de atualizar o app</div>
+          </div>
+        </div>
+        <span class="backup-chevron ${backupOpen?'open':''}" id="backupChevron">▼</span>
+      </div>
+      <div class="backup-bar-body ${backupOpen?'':'hidden'}" id="backupBody">
+        <button class="backup-btn backup-btn-export" onclick="exportarJSON()">⬆️ Exportar</button>
+        <button class="backup-btn backup-btn-import" onclick="abrirImportar()">⬇️ Importar</button>
+      </div>
+    </div>`;
+
+  const searchBar = `
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="searchInput" type="text" placeholder="Buscar pessoa..." value="${esc(searchQuery)}"
+        oninput="onSearch(this.value)" autocomplete="off" autocorrect="off">
+      ${searchQuery ? `<button class="search-clear" onclick="clearSearch()">✕</button>` : ''}
+    </div>`;
+
+  const pessoasFiltradas = searchQuery
+    ? state.pessoas.filter(p => p.nome.toLowerCase().includes(searchQuery.toLowerCase()))
+    : state.pessoas;
+
+  if (state.pessoas.length === 0) {
+    el.innerHTML = backupBar + searchBar + `<div class="empty"><div class="icon">👥</div><p>Nenhuma pessoa cadastrada.<br>Toque no + para adicionar.</p></div>`;
+    return;
+  }
+
+  const listaHTML = pessoasFiltradas.slice().sort((a, b) => {
+    const qA = saldoP(a) === 0 ? 1 : 0;
+    const qB = saldoP(b) === 0 ? 1 : 0;
+    if (qA !== qB) return qA - qB;
+    const tsA = a.lancamentos.length ? Math.max.apply(null, a.lancamentos.map(function(l){return l.ts||0;})) : 0;
+    const tsB = b.lancamentos.length ? Math.max.apply(null, b.lancamentos.map(function(l){return l.ts||0;})) : 0;
+    return tsB - tsA;
+  }).map(p => {
+    const saldo = saldoP(p);
+    const { cls, label } = saldoInfo(saldo);
+    return `
+      <div class="pessoa-card" data-pid="${p.id}" style="${p.silencioso?'opacity:0.6':''}">
+        <div class="pessoa-top">
+          <div class="pessoa-nome">${esc(p.nome)}${p.silencioso?' <span style="font-size:13px">🔕</span>':''}</div>
+          <div style="display:flex;align-items:center">
+            <div class="pessoa-saldo ${cls}">${label}</div>
+            <div class="arrow">›</div>
+          </div>
+        </div>
+        <div class="pessoa-bottom">
+          <span class="pessoa-tag tag-entrada">${fmt(totalEntradas(p))}</span>
+          <span class="pessoa-tag tag-pagamento">${fmt(totalPagamentos(p))}</span>
+          ${p.silencioso?`<span style="font-size:11px;color:#606060">Fora do total</span>`:''}
+        </div>
+      </div>`;
+  }).join('');
+
+  const semResultado = pessoasFiltradas.length === 0
+    ? `<div class="empty" style="padding:32px"><p>Nenhuma pessoa encontrada<br>para "<strong>${esc(searchQuery)}</strong>"</p></div>`
+    : '';
+
+  el.innerHTML = backupBar + searchBar + listaHTML + semResultado;
+}
+
+function onSearch(val) {
+  searchQuery = val;
+  // Re-renderiza só a lista sem perder foco
+  const el = document.getElementById('content');
+  renderPessoas(el);
+  attachGestures();
+  // Mantém foco e cursor no final
+  const inp = document.getElementById('searchInput');
+  if (inp) { inp.focus(); inp.setSelectionRange(val.length, val.length); }
+}
+
+function clearSearch() {
+  searchQuery = '';
+  render();
+  setTimeout(() => (function(){var el=document.getElementById('searchInput');if(el)el.focus();})(), 50);
+}
+
+function renderDetalhe(el) {
+  const p = getPessoa(currentPessoa);
+  if (!p) { currentPessoa=null; render(); return; }
+  const saldo = saldoP(p);
+  const { cls, label, desc } = saldoInfo(saldo);
+  const lancs = p.lancamentos.slice().sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
+
+  const haverBanner = saldo < 0 ? `
+    <div class="haver-banner">
+      <div><strong>${fmt(Math.abs(saldo))}</strong> saldo positivo ${esc(p.nome)}</div>
+    </div>` : '';
+
+  const isFluxo = p.modo === 'fluxo';
+  const label1 = isFluxo ? 'Saída' : 'A Receber';
+  const label2 = isFluxo ? 'Entrada' : 'Recebido';
+  const getLancIcon = l => {
+    if (isFluxo) return l.tipo==='entrada'
+      ? `<span style="color:#f59e0b;font-size:22px;font-weight:900;line-height:1;-webkit-text-stroke:0.5px #f59e0b;display:inline-block">❯</span>`
+      : `<span style="color:#4ade80;font-size:22px;font-weight:900;line-height:1;-webkit-text-stroke:0.5px #4ade80;display:inline-block">❮</span>`;
+    return '';
+  };
+  const getLancMeta = l => {
+    const tipoLabel = isFluxo ? (l.tipo==='entrada'?'Saída':'Entrada') : (l.tipo==='entrada'?'Adiantamento':'Pagamento');
+    return `${tipoLabel} · ${l.data || '—'}`;
+  };
+
+  el.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-back" onclick="closePessoa()">‹ Voltar</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div class="detail-nome">${esc(p.nome)}</div>
+        <button class="icon-btn" onclick="toggleMenuPessoa(${p.id})" id="btnMenuPessoa" style="font-size:16px;font-weight:900;letter-spacing:2px;width:36px;height:36px;color:var(--text)">···</button>
+      </div>
+      <div id="menuPessoa" style="display:none;margin-top:10px;background:#1a1a1a;border-radius:10px;overflow:hidden;border:1px solid #333">
+        <div onclick="toggleModoPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px;border:1.5px solid ${isFluxo?'#4ade80':'#4d8ef0'};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center">${isFluxo?'💸':'🔄'}</span>
+          <span style="font-size:13px;font-weight:600">${isFluxo ? 'Modo padrão' : 'Modo fluxo'}</span>
+        </div>
+        <div onclick="exportarPDFPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px">📄</span>
+          <span style="font-size:13px;font-weight:600">Exportar PDF</span>
+        </div>
+        <div onclick="closeMenuPessoa();exportarPNGPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px">🖼️</span>
+          <span style="font-size:13px;font-weight:600">Exportar PNG</span>
+        </div>
+        <div onclick="closeMenuPessoa();editPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px">✏️</span>
+          <span style="font-size:13px;font-weight:600">Editar nome</span>
+        </div>
+        <div onclick="closeMenuPessoa();confirmDeletePessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
+          <span style="font-size:16px">🗑️</span>
+          <span style="font-size:13px;font-weight:600;color:var(--red)">Excluir pessoa</span>
+        </div>
+      </div>
+      <div class="detail-saldo-label">${saldo < 0 ? 'Saldo positivo' : saldo === 0 ? 'Situação' : 'Saldo devedor'}</div>
+      <div class="detail-saldo ${cls}">${label}</div>
+      <div class="detail-stats">
+        <div class="stat-box" style="${isFluxo?'background:#3a2a0a;color:#f59e0b':'background:var(--accent-light);color:var(--accent)'}"><div class="stat-label">${label1}</div><div class="stat-val">${fmt(totalEntradas(p))}</div></div>
+        <div class="stat-box stat-pagamento"><div class="stat-label">${label2}</div><div class="stat-val">${fmt(totalPagamentos(p))}</div></div>
+      </div>
+    </div>
+    ${haverBanner}
+    <div class="section-label">Movimentações</div>
+    ${lancs.length===0 ? `<div class="empty" style="padding:32px"><p>Nenhuma movimentação ainda.<br>Toque no + para adicionar.</p></div>` : ''}
+    ${lancs.map(l => {
+      const isEntrada = l.tipo==='entrada';
+      const corPonta = isFluxo
+        ? (isEntrada ? '#f59e0b' : '#4ade80')
+        : (isEntrada ? 'var(--accent)' : 'var(--green)');
+      const corValor = isFluxo
+        ? (isEntrada ? '#f59e0b' : '#4ade80')
+        : (isEntrada ? 'var(--accent)' : 'var(--green)');
+      return `
+      <div class="lanc-card" style="border-left-color:${corPonta}" data-lid="${l.id}" data-pid="${p.id}">
+        <div class="lanc-left">
+          <div class="lanc-icon">${getLancIcon(l)}</div>
+          <div>
+            <div class="lanc-desc">${esc(l.descricao)}</div>
+            <div class="lanc-meta">${getLancMeta(l)}</div>
+          </div>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;color:${corValor};font-weight:500">${isEntrada?'+':'-'}${fmt(l.valor)}</div>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function renderResumo(el) {
+  if (state.pessoas.length===0) { el.innerHTML=`<div class="empty"><div class="icon">📊</div><p>Nenhum dado ainda.</p></div>`; return; }
+  const rows = state.pessoas.slice().sort((a,b) => {
+    const qA = saldoP(a) === 0 ? 1 : 0;
+    const qB = saldoP(b) === 0 ? 1 : 0;
+    return qA - qB;
+  }).map(p => {
+    const saldo = saldoP(p);
+    const { cls, label } = saldoInfo(saldo);
+    return `<div class="resumo-row">
+      <div class="resumo-nome">${esc(p.nome)}</div>
+      <div class="resumo-vals">
+        <div class="resumo-saldo ${cls}">${label}</div>
+        <div class="resumo-detail">💸${fmt(totalEntradas(p))} ✅${fmt(totalPagamentos(p))}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="resumo-card">${rows}</div>
+    <div class="resumo-total">
+      <div class="resumo-total-label">Total a receber</div>
+      <div class="resumo-total-val">${fmt(totalGeralSaldo())}</div>
+    </div>
+    <button onclick="exportarPDF()" style="width:100%;margin-top:12px;padding:14px;background:#1a3a5c;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;cursor:pointer;">
+      📄 Exportar relatório
+    </button>`;
+}
+
+function setTab(tab) { currentTab=tab; currentPessoa=null; fabOpen=false; searchQuery=''; render(); }
+function openPessoa(id) { currentPessoa=id; fabOpen=false; searchQuery=''; render(); }
+function closePessoa() { currentPessoa=null; fabOpen=false; render(); }
+
+function showModal(title, bodyHTML) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  document.getElementById('overlay').style.display = 'flex';
+}
+function closeModal() { document.getElementById('overlay').style.display='none'; editTarget=null; }
+
+function showModalAddPessoa() {
+  showModal('Nova Pessoa', `
+    <div class="input-label">Nome</div>
+    <input class="input" id="inNome" placeholder="Ex: João Silva" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="addPessoa()">Salvar</button>
+    </div>`);
+  setTimeout(() => (function(){var el=document.getElementById('inNome');if(el)el.focus();})(), 100);
+}
+function addPessoa() {
+  const nome = document.getElementById('inNome').value.trim();
+  if (!nome) return;
+  state.pessoas.push({ id: state.nextId++, nome, lancamentos: [] });
+  save(); closeModal(); render();
+}
+function editPessoa(id) {
+  editTarget = id;
+  const p = getPessoa(id);
+  showModal('Editar Pessoa', `
+    <div class="input-label">Nome</div>
+    <input class="input" id="inNome" value="${esc(p.nome)}" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditPessoa()">Salvar</button>
+    </div>`);
+  setTimeout(() => (function(){var el=document.getElementById('inNome');if(el)el.focus();})(), 100);
+}
+function saveEditPessoa() {
+  const nome = document.getElementById('inNome').value.trim();
+  if (!nome) return;
+  const p = getPessoa(editTarget); if (p) p.nome = nome;
+  save(); closeModal(); render();
+}
+function confirmDeletePessoa(id) {
+  editTarget = id;
+  const p = getPessoa(id);
+  showModal('Excluir Pessoa', `
+    <div class="confirm-text">Excluir <strong>${esc(p.nome)}</strong> e todas as movimentações?</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="deletePessoa()">Excluir</button>
+    </div>`);
+}
+function deletePessoa() {
+  state.pessoas = state.pessoas.filter(p => p.id !== editTarget);
+  currentPessoa = null; save(); closeModal(); render();
+}
+
+function showModalLanc(tipo) {
+  fabOpen = false;
+  calcExpr = ''; calcCurrent = '0'; calcNewNum = true;
+  const pAtual = currentPessoa !== null ? getPessoa(currentPessoa) : null;
+  const isFluxo = (pAtual ? pAtual.modo : undefined) === 'fluxo';
+  const title = tipo==='entrada'
+    ? (isFluxo ? '→ Nova Saída' : '💸 Novo Adiantamento')
+    : (isFluxo ? '← Nova Entrada' : '✅ Pagamento Recebido');
+  const btnCls = tipo==='entrada' ? 'btn-primary' : 'btn-green';
+  showModal(title, `
+    <div class="input-label">Descrição</div>
+    <input class="input" id="inDesc" placeholder="${tipo==='entrada'?'Ex: Pix, Gasolina...':'Ex: Devolução parcial...'}" autocomplete="off">
+    <div class="input-label">Valor (R$)</div>
+    <input class="input" id="inVal" placeholder="Ex: 500" type="number" min="0" step="0.01" readonly style="cursor:pointer" onclick="toggleCalc()">
+    <div id="calcWrap" style="display:none">
+      <div class="calc-display">
+        <div class="calc-expr" id="calcExpr"></div>
+        <div class="calc-result" id="calcResult">0</div>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-clear" onclick="calcAction('C')">C</button>
+        <button class="calc-btn calc-op" onclick="calcAction('±')">±</button>
+        <button class="calc-btn calc-op" onclick="calcAction('%')">%</button>
+        <button class="calc-btn calc-op" onclick="calcAction('⌫')">⌫</button>
+        <button class="calc-btn calc-num" onclick="calcAction('7')">7</button>
+        <button class="calc-btn calc-num" onclick="calcAction('8')">8</button>
+        <button class="calc-btn calc-num" onclick="calcAction('9')">9</button>
+        <button class="calc-btn calc-op" onclick="calcAction('÷')">÷</button>
+        <button class="calc-btn calc-num" onclick="calcAction('4')">4</button>
+        <button class="calc-btn calc-num" onclick="calcAction('5')">5</button>
+        <button class="calc-btn calc-num" onclick="calcAction('6')">6</button>
+        <button class="calc-btn calc-op" onclick="calcAction('×')">×</button>
+        <button class="calc-btn calc-num" onclick="calcAction('1')">1</button>
+        <button class="calc-btn calc-num" onclick="calcAction('2')">2</button>
+        <button class="calc-btn calc-num" onclick="calcAction('3')">3</button>
+        <button class="calc-btn calc-op" onclick="calcAction('-')">−</button>
+        <button class="calc-btn calc-num" onclick="calcAction('0')">0</button>
+        <button class="calc-btn calc-num" onclick="calcAction(',')">.</button>
+        <button class="calc-btn calc-op" onclick="calcAction('+')">+</button>
+        <button class="calc-btn calc-eq" onclick="calcAction('=')">=</button>
+      </div>
+      <button class="calc-usar" onclick="usarResultado()">✅ Usar este valor</button>
+    </div>
+    <div class="input-label">Data</div>
+    <input class="input" id="inData" type="date" value="${new Date().toISOString().slice(0,10)}">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn ${btnCls}" onclick="addLanc('${tipo}')">Salvar</button>
+    </div>`);
+  setTimeout(() => (function(){var el=document.getElementById('inDesc');if(el)el.focus();})(), 100);
+}
+function addLanc(tipo) {
+  const desc = document.getElementById('inDesc').value.trim();
+  const val = parseFloat(document.getElementById('inVal').value);
+  if (!desc || isNaN(val) || val<=0) return;
+  const p = getPessoa(currentPessoa); if (!p) return;
+  const dataRaw = document.getElementById('inData').value;
+  let dataFmt = hoje();
+  if (dataRaw) {
+    const [ano, mes, dia] = dataRaw.split('-');
+    dataFmt = `${dia}/${mes}/${ano}`;
+  }
+  p.lancamentos.push({ id: nextLancId(p), tipo, descricao: desc, valor: val, data: dataFmt, ts: Date.now() });
+  save(); closeModal(); render();
+}
+
+function editLanc(pessoaId, lancId) {
+  editTarget = { pessoaId, lancId };
+  const p = getPessoa(pessoaId);
+  const l = p ? p.lancamentos.find(function(x){return x.id===lancId;}) : null; if (!l) return;
+  const title = l.tipo==='entrada' ? '💸 Editar Adiantamento' : '✅ Editar Pagamento';
+  const btnCls = l.tipo==='entrada' ? 'btn-primary' : 'btn-green';
+  const dataParaInput = (d) => {
+    if (!d) return '';
+    const [dia, mes, ano] = d.split('/');
+    return `${ano}-${mes}-${dia}`;
+  };
+  calcExpr = ''; calcCurrent = String(l.valor); calcNewNum = true;
+  showModal(title, `
+    <div class="input-label">Descrição</div>
+    <input class="input" id="inDesc" value="${esc(l.descricao)}" autocomplete="off">
+    <div class="input-label">Valor (R$)</div>
+    <input class="input" id="inVal" placeholder="Ex: 500" type="number" min="0" step="0.01" value="${l.valor}" readonly style="cursor:pointer" onclick="toggleCalc()">
+    <div id="calcWrap" style="display:none">
+      <div class="calc-display">
+        <div class="calc-expr" id="calcExpr"></div>
+        <div class="calc-result" id="calcResult">${l.valor.toLocaleString('pt-BR')}</div>
+      </div>
+      <div class="calc-grid">
+        <button class="calc-btn calc-clear" onclick="calcAction('C')">C</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('±')">±</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('%')">%</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('⌫')">⌫</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('7')">7</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('8')">8</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('9')">9</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('÷')">÷</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('4')">4</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('5')">5</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('6')">6</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('×')">×</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('1')">1</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('2')">2</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('3')">3</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('-')">−</button>
+        <button class="calc-btn calc-num"   onclick="calcAction('0')">0</button>
+        <button class="calc-btn calc-num"   onclick="calcAction(',')">.</button>
+        <button class="calc-btn calc-op"    onclick="calcAction('+')">＋</button>
+        <button class="calc-btn calc-eq"    onclick="calcAction('=')">=</button>
+      </div>
+      <button class="calc-usar" onclick="usarResultado()">✅ Usar este valor</button>
+    </div>
+    <div class="input-label">Data</div>
+    <input class="input" id="inData" type="date" value="${dataParaInput(l.data)}">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn ${btnCls}" onclick="saveEditLanc()">Salvar</button>
+    </div>`);
+  setTimeout(() => (function(){var el=document.getElementById('inDesc');if(el)el.focus();})(), 100);
+}
+function saveEditLanc() {
+  const desc = document.getElementById('inDesc').value.trim();
+  const val = parseFloat(document.getElementById('inVal').value);
+  if (!desc || isNaN(val) || val<=0) return;
+  const dataRaw = document.getElementById('inData').value;
+  const p = getPessoa(editTarget.pessoaId);
+  const l = p ? p.lancamentos.find(function(x){return x.id===editTarget.lancId;}) : null;
+  let dataFmt = (l ? l.data : undefined) || hoje();
+  if (dataRaw) {
+    const [ano, mes, dia] = dataRaw.split('-');
+    dataFmt = `${dia}/${mes}/${ano}`;
+  }
+  if (l) {
+    const mudou = l.descricao !== desc || l.valor !== val || l.data !== dataFmt;
+    l.descricao = desc; l.valor = val; l.data = dataFmt;
+    if (mudou) l.ts = Date.now();
+  }
+  save(); closeModal(); render();
+}
+function toggleMenuPessoa(id) {
+  const menu = document.getElementById('menuPessoa');
+  if (!menu) return;
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+function closeMenuPessoa() {
+  const menu = document.getElementById('menuPessoa');
+  if (menu) menu.style.display = 'none';
+}
+
+function toggleModoPessoa(id) {
+  const p = getPessoa(id); if (!p) return;
+  p.modo = p.modo === 'fluxo' ? 'normal' : 'fluxo';
+  save(); render();
+}
+
+function confirmDeleteLanc(pessoaId, lancId) {
+  editTarget = { pessoaId, lancId };
+  const p = getPessoa(pessoaId);
+  const l = p ? p.lancamentos.find(function(x){return x.id===lancId;}) : null;
+  showModal('Excluir Movimentação', `
+    <div class="confirm-text">Excluir <strong>${esc((l ? l.descricao : undefined))}</strong> de ${fmt((l ? l.valor : undefined)||0)}?</div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-danger" onclick="deleteLanc()">Excluir</button>
+    </div>`);
+}
+function deleteLanc() {
+  const p = getPessoa(editTarget.pessoaId);
+  if (p) p.lancamentos = p.lancamentos.filter(l => l.id!==editTarget.lancId);
+  save(); closeModal(); render();
+}
+
+function exportarPDF() {
+  if (state.pessoas.length === 0) { alert('Nenhum dado para exportar!'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const now = hoje();
+  doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,92);
+  doc.text('Relatório de Adiantamentos', 40, 36);
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(148,163,184);
+  doc.text(`Gerado em ${now}`, 555, 28, {align:'right'});
+  doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(185,28,28);
+  doc.text(`Total a receber: ${fmt(totalGeralSaldo())}`, 555, 44, {align:'right'});
+  doc.setDrawColor(200,210,220); doc.setLineWidth(0.5);
+  doc.line(40, 50, 555, 50);
+  let y = 66;
+  state.pessoas.forEach(p => {
+    const sal = saldoP(p);
+    const salTxt = sal>0?`${fmt(sal)} a receber`:sal<0?`Saldo positivo ${fmt(Math.abs(sal))}`:'Quitado';
+    const salColor = sal>0?[185,28,28]:sal<0?[124,58,237]:[21,128,61];
+    doc.setFontSize(12); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,92);
+    doc.text(p.nome, 40, y);
+    doc.setFontSize(10); doc.setTextColor(salColor[0], salColor[1], salColor[2]);
+    doc.text(salTxt, 555, y, {align:'right'}); y += 4;
+    const rows = p.lancamentos.map(l=>[l.tipo==='entrada'?'Adt':'Pag',l.descricao,(l.tipo==='pagamento'?'- ':'+')+fmt(l.valor),l.data?l.data.slice(0,5):'—']);
+    doc.autoTable({ startY:y, head:[['Tipo','Descrição','Valor','Data']], body:rows.length?rows:[['—','Sem lançamentos','','']],
+      styles:{fontSize:9,cellPadding:5}, headStyles:{fillColor:[240,244,248],textColor:[71,85,105],fontStyle:'bold',lineWidth:0.3,lineColor:[200,210,220]},
+      alternateRowStyles:{fillColor:[250,252,255]}, columnStyles:{2:{halign:'right'},3:{halign:'right',textColor:[148,163,184]}},
+      didParseCell:d=>{
+        if(d.column.index===0&&d.section==='body') d.cell.styles.textColor=d.cell.raw==='Adt'?[37,99,235]:[21,128,61];
+        if(d.column.index===2&&d.section==='body') d.cell.styles.textColor=String(d.cell.raw).startsWith('+')?[37,99,235]:[21,128,61];
+      }, margin:{left:40,right:40} });
+    y = doc.lastAutoTable.finalY + 18;
+  });
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(26,58,92);
+  doc.text('Resumo Geral', 40, y+4); y += 10;
+  doc.autoTable({ startY:y, head:[['Pessoa','Adiantado','Recebido','Saldo']],
+    body:state.pessoas.map(p=>[p.nome,fmt(totalEntradas(p)),fmt(totalPagamentos(p)),fmt(Math.abs(saldoP(p)))]),
+    styles:{fontSize:9,cellPadding:5}, headStyles:{fillColor:[26,58,92],textColor:[255,255,255],fontStyle:'bold'},
+    columnStyles:{1:{halign:'right'},2:{halign:'right'},3:{halign:'right'}},
+    didParseCell:d=>{ if(d.column.index===3&&d.section==='body'){const p=state.pessoas[d.row.index];if(p)d.cell.styles.textColor=saldoP(p)>0?[185,28,28]:saldoP(p)<0?[124,58,237]:[21,128,61];}},
+    margin:{left:40,right:40} });
+  let previewHtml = `<div style="font-family:Arial,sans-serif;color:#1e293b;">
+    <div style="margin-bottom:16px;border-bottom:2px solid #1a3a5c;padding-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+      <div><div style="font-size:18px;font-weight:700;color:#1a3a5c">Relatório de Adiantamentos</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">Gerado em ${now}</div></div>
+      <div style="text-align:right"><div style="font-size:11px;color:#94a3b8">Total a receber</div>
+      <div style="font-size:18px;font-weight:700;color:#dc2626">${fmt(totalGeralSaldo())}</div></div>
+    </div>
+    ${state.pessoas.map(p=>{const sal=saldoP(p);return `
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;border-bottom:1.5px solid #1a3a5c;padding-bottom:4px;margin-bottom:6px;">
+        <b style="color:#1a3a5c;font-size:14px">${p.nome}</b>
+        <span style="color:${sal>0?'#dc2626':sal<0?'#7c3aed':'#16a34a'};font-size:13px;font-weight:700">${sal>0?fmt(sal)+' a receber':sal<0?'Saldo positivo '+fmt(Math.abs(sal)):'✅ Quitado'}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <tr style="background:#f0f4f8"><th style="padding:5px;text-align:left;color:#475569">Tipo</th><th style="padding:5px;text-align:left;color:#475569">Descrição</th><th style="padding:5px;text-align:right;color:#475569">Valor</th><th style="padding:5px;text-align:right;color:#475569">Data</th></tr>
+        ${p.lancamentos.map((l,i)=>`<tr style="background:${i%2===0?'#fff':'#f8fafc'}"><td style="padding:5px;color:${l.tipo==='entrada'?'#2563eb':'#15803d'}">${l.tipo==='entrada'?'Adt':'Pag'}</td><td style="padding:5px">${l.descricao}</td><td style="padding:5px;text-align:right;color:${l.tipo==='entrada'?'#2563eb':'#15803d'};font-weight:600">${fmt(l.valor)}</td><td style="padding:5px;text-align:right;color:#94a3b8">${l.data?l.data.slice(0,5):'—'}</td></tr>`).join('')}
+      </table>
+    </div>`}).join('')}
+  </div>`;
+  mostrarPreview(previewHtml, () => {
+    compartilharPDF(doc.output('blob'), `adiantamentos-${now.replace(/\//g,'-')}.pdf`);
+  });
+}
+
+function exportarPDFPessoa(id) {
+  const p = getPessoa(id); if (!p) return;
+  const isFluxo = p.modo === 'fluxo';
+  const box1Label = isFluxo ? 'SAÍDA' : 'A RECEBER';
+  const box2Label = isFluxo ? 'ENTRADA' : 'RECEBIDO';
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+  const now = hoje();
+  const sal = saldoP(p);
+  const salTxt = sal > 0 ? fmt(sal) + ' a receber' : sal < 0 ? fmt(Math.abs(sal)) + ' saldo positivo' : 'Quitado';
+  const salColor = sal > 0 ? [185,28,28] : sal < 0 ? [124,58,237] : [21,128,61];
+  const cor1 = isFluxo ? [180,83,9] : [29,78,216];
+  const bg1 = isFluxo ? [254,243,199] : [219,234,254];
+  const lancs = [...p.lancamentos].sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
+
+  const fmtS = function(v) { return fmt(v).replace(',00',''); };
+
+  // Cabeçalho: data pequena + nome grande
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
+  doc.text(now, 40, 26);
+  doc.setFontSize(26); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+  doc.text(p.nome, 40, 52);
+  // Linha divisória
+  doc.setDrawColor(229,231,235); doc.setLineWidth(0.8);
+  doc.line(40, 62, 555, 62);
+
+  // Três boxes: SAÍDA | ENTRADA | SALDO
+  var bW = (555 - 40 - 16) / 3;
+  var bY = 70, bH = 50;
+  // Box 1
+  doc.setFillColor(bg1[0],bg1[1],bg1[2]); doc.roundedRect(40, bY, bW, bH, 3,3,'F');
+  doc.setFontSize(9); doc.setTextColor(cor1[0],cor1[1],cor1[2]); doc.text(box1Label, 48, bY+14);
+  doc.setFontSize(16); doc.text(fmtS(totalEntradas(p)), 48, bY+38);
+  // Box 2
+  doc.setFillColor(220,252,231); doc.roundedRect(40+bW+8, bY, bW, bH, 3,3,'F');
+  doc.setFontSize(9); doc.setTextColor(21,128,61); doc.text(box2Label, 48+bW+8, bY+14);
+  doc.setFontSize(16); doc.text(fmtS(totalPagamentos(p)), 48+bW+8, bY+38);
+  // Box 3 - SALDO
+  var salBg = sal > 0 ? [254,226,226] : sal < 0 ? [237,233,254] : [220,252,231];
+  doc.setFillColor(salBg[0],salBg[1],salBg[2]); doc.roundedRect(40+bW*2+16, bY, bW, bH, 3,3,'F');
+  doc.setFontSize(9); doc.setTextColor(salColor[0],salColor[1],salColor[2]); doc.text('SALDO', 48+bW*2+16, bY+14);
+  doc.setFontSize(16); doc.text(sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado', 48+bW*2+16, bY+38);
+
+  // Label MOVIMENTAÇÕES
+  var y = bY + bH + 14;
+  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(156,163,175);
+  doc.text('MOVIMENTAÇÕES', 40, y);
+  y += 10;
+
+  // Calcular coluna decimal (largura máxima da parte inteira)
+  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  var maxW = 0;
+  lancs.forEach(function(l) {
+    var s = fmtS(l.valor).replace('R$\u00a0','').replace('R$ ','').trim().split(',')[0];
+    var w = doc.getTextWidth(s);
+    if(w > maxW) maxW = w;
+  });
+  var COL_SINAL = 46;
+  var COL_RS    = COL_SINAL + doc.getTextWidth('+') + 2;
+  var COL_VIRGULA = COL_RS + doc.getTextWidth('R$ ') + maxW + 2;
+  var COL_DESC = COL_VIRGULA + doc.getTextWidth(',00') + 12;
+  var COL_DATA = 555;
+  var ROW_H = 20;
+
+  lancs.forEach(function(l, i) {
+    var isEnt = l.tipo === 'entrada';
+    var corLanc = isFluxo ? (isEnt ? [217,119,6] : [21,128,61]) : (isEnt ? [37,99,235] : [21,128,61]);
+    var fmtd = fmtS(l.valor);
+    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+    var partes = semRS.split(',');
+    var parteInt = partes[0];
+    var parteDec = (partes[1] && partes[1] !== '00') ? ',' + partes[1] : '';
+    var sinal = isEnt ? '+' : '-';
+    var dataCorta = l.data ? l.data.slice(0,5) : '';
+
+    // Fundo alternado
+    if(i % 2 === 0) {
+      doc.setFillColor(249,250,251);
+      doc.rect(40, y+1, 515, ROW_H, 'F');
+    }
+
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.setTextColor(corLanc[0],corLanc[1],corLanc[2]);
+    // Sinal
+    doc.text(sinal, COL_SINAL, y+14);
+    // R$
+    doc.text('R$', COL_RS, y+14);
+    // Parte inteira alinhada à direita da coluna
+    var intW = doc.getTextWidth(parteInt);
+    doc.text(parteInt, COL_VIRGULA - intW, y+14);
+    // Parte decimal
+    if(parteDec) doc.text(parteDec, COL_VIRGULA, y+14);
+
+    // Descrição
+    doc.setTextColor(17,24,39);
+    var maxDescW = COL_DATA - COL_DESC - 30;
+    var desc = l.descricao;
+    while(desc.length > 0 && doc.getTextWidth(desc) > maxDescW) desc = desc.slice(0,-1);
+    if(desc.length < l.descricao.length) desc += '...';
+    doc.text(desc, COL_DESC, y+14);
+
+    // Data
+    doc.setTextColor(55,65,81);
+    doc.text(dataCorta, COL_DATA, y+14, {align:'right'});
+
+    y += ROW_H;
+  });
+
+  // Linha e saldo final
+  y += 6;
+  doc.setDrawColor(229,231,235); doc.setLineWidth(0.5);
+  doc.line(40, y, 555, y);
+  y += 18;
+  doc.setFontSize(15); doc.setTextColor(salColor[0],salColor[1],salColor[2]);
+  doc.text(salTxt, 40, y);
+
+  // Preview HTML com mesmo estilo
+  const previewHtml = `<div style="font-family:Arial,sans-serif;color:#1e293b;font-size:13px;">
+    <div style="margin-bottom:8px;">
+      <div style="font-size:10px;color:#9ca3af">${now}</div>
+      <div style="font-size:18px;font-weight:700;color:#111827;margin-top:2px">${p.nome}</div>
+    </div>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:6px 0">
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <div style="flex:1;background:${isFluxo?'#fef3c7':'#dbeafe'};border-radius:5px;padding:6px 8px">
+        <div style="font-size:9px;font-weight:700;color:${isFluxo?'#b45309':'#1d4ed8'}">${box1Label}</div>
+        <div style="font-size:14px;font-weight:700;color:${isFluxo?'#b45309':'#1d4ed8'}">${fmtS(totalEntradas(p))}</div>
+      </div>
+      <div style="flex:1;background:#dcfce7;border-radius:5px;padding:6px 8px">
+        <div style="font-size:9px;font-weight:700;color:#15803d">${box2Label}</div>
+        <div style="font-size:14px;font-weight:700;color:#15803d">${fmtS(totalPagamentos(p))}</div>
+      </div>
+      <div style="flex:1;background:${sal>0?'#fee2e2':sal<0?'#ede9fe':'#dcfce7'};border-radius:5px;padding:6px 8px">
+        <div style="font-size:9px;font-weight:700;color:${sal>0?'#dc2626':sal<0?'#7c3aed':'#16a34a'}">SALDO</div>
+        <div style="font-size:14px;font-weight:700;color:${sal>0?'#dc2626':sal<0?'#7c3aed':'#16a34a'}">${sal!==0?fmtS(Math.abs(sal)):'Quitado'}</div>
+      </div>
+    </div>
+    <div style="font-size:9px;color:#9ca3af;font-weight:700;margin-bottom:6px">MOVIMENTAÇÕES</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      ${lancs.map(function(l,i){
+        var isEnt = l.tipo==='entrada';
+        var cor = isFluxo?(isEnt?'#d97706':'#15803d'):(isEnt?'#2563eb':'#15803d');
+        var fmtd = fmtS(l.valor);
+        var semRS = fmtd.replace('R\u00a0$','').replace('R$ ','').trim();
+        // Separar R$ do número
+        var numPart = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+        var partes = numPart.split(',');
+        var intPart = partes[0];
+        var decPart = (partes[1] && partes[1]!=='00') ? ','+partes[1] : '';
+        var sinal = isEnt ? '+' : '-';
+        var dataCorta = l.data ? l.data.slice(0,5) : '';
+        return '<tr style="background:'+(i%2===0?'#f9fafb':'#fff')+';vertical-align:top">'+
+          '<td style="padding:5px 4px;white-space:nowrap;font-weight:700;color:'+cor+';font-family:monospace">'+
+            sinal+'R$ <span style="display:inline-block;text-align:right;min-width:60px">'+intPart+'</span>'+decPart+
+          '</td>'+
+          '<td style="padding:5px 8px;color:#111827;word-break:break-word">'+l.descricao+'</td>'+
+          '<td style="padding:5px 4px;white-space:nowrap;color:#374151;text-align:right;font-size:12px">'+dataCorta+'</td>'+
+        '</tr>';
+      }).join('')}
+    </table>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:8px 0">
+    <div style="font-weight:700;color:${sal>0?'#dc2626':sal<0?'#7c3aed':'#16a34a'}">${salTxt}</div>
+  </div>`;
+
+  mostrarPreview(previewHtml, function() {
+    compartilharPDF(doc.output('blob'), p.nome+'-'+now.replace(/\//g,'-')+'.pdf');
+  });
+}
+
+function exportarPNGPessoa(id) {
+  // Formata valor sem os centavos ,00
+  var fmtS = function(v) {
+    var s = fmt(v);
+    return s.replace(',00','');
+  };
+  const p = getPessoa(id); if (!p) return;
+  const isFluxo = p.modo === 'fluxo';
+  const sal = saldoP(p);
+  const label1 = isFluxo ? 'SAÍDA' : 'A RECEBER';
+  const label2 = isFluxo ? 'ENTRADA' : 'RECEBIDO';
+  const cor1 = isFluxo ? '#f59e0b' : '#4d8ef0';
+  const bg1  = isFluxo ? '#3a2a0a' : '#1e3a6e';
+  const lancs = p.lancamentos.slice().sort((a, b) => {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
+
+  const W = 900;
+  const PAD = 40;
+  const LINE_H = 64;
+  const HEADER_H = 210;
+  const BODY_H = lancs.length * LINE_H + 70;
+  const H = HEADER_H + BODY_H + 70;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W*2; canvas.height = H*2;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2,2);
+
+  // Fundo branco
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Data pequena
+  ctx.fillStyle = '#6b7280';
+  ctx.font = 'bold 18px sans-serif';
+  var dataW = ctx.measureText(hoje() + '  ').width;
+  ctx.fillText(hoje(), PAD, 60);
+
+  // Nome maior
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillText(p.nome, PAD + dataW, 60);
+
+  const salLabel = sal > 0 ? fmtS(sal) + ' a receber' : sal < 0 ? fmtS(Math.abs(sal)) + ' saldo positivo' : 'Quitado';
+  const salCor   = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
+
+  // Linha divisória
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PAD, 76); ctx.lineTo(W-PAD, 76); ctx.stroke();
+
+  // Três boxes: SAÍDA | ENTRADA | SALDO
+  var bW3 = (W - PAD*2 - 24) / 3;
+  var bY = 86, bH = 72;
+
+  // Box 1
+  var cor1bg = isFluxo ? '#fef3c7' : '#dbeafe';
+  var cor1tx = isFluxo ? '#b45309' : '#1d4ed8';
+  ctx.fillStyle = cor1bg;
+  roundRect(ctx, PAD, bY, bW3, bH, 8);
+  ctx.fillStyle = cor1tx;
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(label1, PAD+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+54);
+
+  // Box 2
+  ctx.fillStyle = '#dcfce7';
+  roundRect(ctx, PAD+bW3+12, bY, bW3, bH, 8);
+  ctx.fillStyle = '#15803d';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(label2, PAD+bW3+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
+  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+12, bY+54);
+
+  // Box 3 — SALDO
+  var salBg = sal > 0 ? '#fee2e2' : sal < 0 ? '#ede9fe' : '#dcfce7';
+  ctx.fillStyle = salBg;
+  roundRect(ctx, PAD+bW3*2+24, bY, bW3, bH, 8);
+  ctx.fillStyle = salCor;
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+18);
+  ctx.font = 'bold 26px sans-serif';
+  var salValor = sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado';
+  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+54);
+
+  // Seção movimentações
+  let y = HEADER_H + 10;
+  ctx.fillStyle = '#b0b5b2';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText('MOVIMENTAÇÕES', PAD, y);
+  y += 18;
+
+  // linha fina
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
+  y += 10;
+
+  // Lançamentos
+  ctx.font = 'bold 24px monospace';
+  const COL_SINAL = PAD + 18;
+  const COL_RS    = COL_SINAL + ctx.measureText('+').width + 4;
+  var maxInteiroW = 0;
+  lancs.forEach(function(l) {
+    var fmtd = fmtS(l.valor);
+    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+    var parteInteira = semRS.split(',')[0];
+    var w = ctx.measureText(parteInteira).width;
+    if(w > maxInteiroW) maxInteiroW = w;
+  });
+  var COL_VIRGULA = COL_RS + ctx.measureText('R$ ').width + maxInteiroW + 4;
+
+  lancs.forEach(function(l, i) {
+    const isEnt = l.tipo === 'entrada';
+    const corLanc = isFluxo
+      ? (isEnt ? '#d97706' : '#15803d')
+      : (isEnt ? '#2563eb' : '#15803d');
+    const tipoTxt = isFluxo
+      ? (isEnt ? 'Saída' : 'Entrada')
+      : (isEnt ? 'Adiantamento' : 'Pagamento');
+
+    // Fundo alternado
+    ctx.fillStyle = i % 2 === 0 ? '#f9fafb' : '#ffffff';
+    roundRect(ctx, PAD, y, W-PAD*2, LINE_H-4, 8);
+
+    // Valor à esquerda — alinhado pelo decimal
+    ctx.fillStyle = corLanc;
+    ctx.font = 'bold 24px monospace';
+    var fmtd = fmtS(l.valor);
+    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+    var partes = semRS.split(',');
+    var parteInt = partes[0];
+    var parteDec = (partes[1] && partes[1] !== '00') ? ',' + partes[1] : '';
+    var sinal = isEnt ? '+' : '-';
+    // Sinal
+    ctx.textAlign = 'left';
+    ctx.fillText(sinal, COL_SINAL, y+36);
+    // R$
+    ctx.fillText('R$', COL_RS, y+36);
+    // Parte inteira — alinhada à direita na COL_VIRGULA
+    ctx.textAlign = 'right';
+    ctx.fillText(parteInt, COL_VIRGULA, y+36);
+    // Parte decimal — alinhada à esquerda da COL_VIRGULA
+    ctx.textAlign = 'left';
+    ctx.fillText(parteDec, COL_VIRGULA, y+36);
+    ctx.textAlign = 'left';
+
+    // Data curta no fim da linha
+    var dataCorta = l.data ? l.data.slice(0,5) : '';
+    ctx.fillStyle = '#374151';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(dataCorta, W-PAD, y+36);
+    ctx.textAlign = 'left';
+
+    // Descrição à esquerda, logo após a coluna decimal
+    var colDescStart = COL_VIRGULA + ctx.measureText(',00').width + 36;
+    ctx.fillStyle = '#111827';
+    ctx.font = '500 22px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - colDescStart - 10), colDescStart, y+36);
+
+    y += LINE_H;
+  });
+
+  // Linha total
+  y += 10;
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke();
+  y += 28;
+  ctx.fillStyle = salCor;
+  ctx.font = 'bold 26px monospace';
+  ctx.fillText(salLabel, PAD, y);
+
+  // Exportar
+  canvas.toBlob(blob => {
+    const agora = new Date();
+    const stamp = agora.toLocaleDateString('pt-BR').replace(/\//g,'-');
+    const fileName = `${p.nome}-${stamp}.png`;
+    const file = new File([blob], fileName, { type:'image/png' });
+    if (navigator.canShare && navigator.canShare({files:[file]})) {
+      navigator.share({files:[file], title: p.nome}).catch(()=>baixarBlob(blob,fileName));
+    } else {
+      baixarBlob(blob, fileName);
+    }
+  }, 'image/png');
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function truncate(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  while (text.length > 0 && ctx.measureText(text+'…').width > maxW) text = text.slice(0,-1);
+  return text + '…';
+}
+
+function baixarBlob(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+function mostrarPreview(htmlContent, gerarPDF) {
+  const old = document.getElementById('pdfPreviewOverlay');
+  if (old) old.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'pdfPreviewOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;overflow:hidden;';
+  overlay.innerHTML = `
+    <div style="background:#1a3a5c;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <button id="btnFecharPreview" style="background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">✕</button>
+      <span style="color:#fff;font-weight:700;font-size:14px;">Prévia</span>
+      <button id="btnCompartilharPDF" style="background:#2563eb;border:none;color:#fff;width:42px;height:42px;border-radius:50%;font-size:20px;cursor:pointer;">&#x2197;</button>
+    </div>
+    <div style="overflow:auto;flex:1;padding:16px;">${htmlContent}</div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('btnFecharPreview').onclick = () => overlay.remove();
+  document.getElementById('btnCompartilharPDF').onclick = () => { gerarPDF(); overlay.remove(); };
+}
+
+function compartilharPDF(blob, fileName) {
+  const file = new File([blob], fileName, {type:'application/pdf'});
+  if (navigator.canShare && navigator.canShare({files:[file]})) {
+    navigator.share({files:[file], title:'Adiantamentos'}).catch(()=>{});
+  } else {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+}
+
+// - Gesture engine -
+function addGesture(el, { onSingle, onDouble, onLong, longDelay = 550 } = {}) {
+  let lastTap=0, tapTimer=null, longTimer=null, moved=false, startX=0, startY=0;
+  el.addEventListener('touchstart', e => {
+    moved=false; startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    el.classList.add('pressing');
+    if (onLong) {
+      if (longDelay > 1000) {
+        const bar = document.createElement('div');
+        bar.className = 'hold-bar';
+        bar.style.animationDuration = longDelay + 'ms';
+        el.appendChild(bar);
+        el._holdBar = bar;
+      }
+      longTimer=setTimeout(()=>{ longTimer=null; if(!moved){el.classList.remove('pressing');if(el._holdBar){el._holdBar.remove();el._holdBar=null;}onLong(e);} }, longDelay);
+    }
+  }, {passive:true});
+  el.addEventListener('touchmove', e => {
+    if (Math.abs(e.touches[0].clientX-startX)>8||Math.abs(e.touches[0].clientY-startY)>8) {
+      moved=true; if(longTimer){clearTimeout(longTimer);longTimer=null;} el.classList.remove('pressing');
+      if(el._holdBar){el._holdBar.remove();el._holdBar=null;}
+    }
+  }, {passive:true});
+  el.addEventListener('touchend', e => {
+    if(longTimer){clearTimeout(longTimer);longTimer=null;} el.classList.remove('pressing');
+    if(el._holdBar){el._holdBar.remove();el._holdBar=null;}
+    if(moved) return;
+    e.preventDefault();
+    const now=Date.now(), gap=now-lastTap; lastTap=now;
+    if(onDouble&&gap<320){ if(tapTimer){clearTimeout(tapTimer);tapTimer=null;} onDouble(e); }
+    else if(onSingle&&onDouble){ tapTimer=setTimeout(()=>{tapTimer=null;onSingle(e);},320); }
+    else if(onSingle){ onSingle(e); }
+  });
+}
+
+function attachGestures() {
+  document.querySelectorAll('.lanc-card[data-lid]').forEach(el => {
+    const pid=parseInt(el.dataset.pid), lid=parseInt(el.dataset.lid);
+    addGesture(el, { onDouble:()=>editLanc(pid,lid), onLong:()=>confirmDeleteLanc(pid,lid) });
+  });
+  document.querySelectorAll('.pessoa-card[data-pid]').forEach(el => {
+    const pid=parseInt(el.dataset.pid);
+    addGesture(el, { onSingle:()=>openPessoa(pid), onLong:()=>toggleSilencioso(pid), longDelay:5000 });
+  });
+}
+
+function toggleSilencioso(id) {
+  const p = getPessoa(id); if (!p) return;
+  p.silencioso = !p.silencioso;
+  save(); render();
+  showToast(p.silencioso ? '🔕 Modo silencioso ativado' : '🔔 Removido do silencioso');
+}
+
+function showToast(msg) {
+  const old = document.getElementById('toast');
+  if (old) old.remove();
+  const t = document.createElement('div');
+  t.id = 'toast';
+  t.style.cssText = 'position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;z-index:999;white-space:nowrap;font-family:DM Sans,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ if(t)t.remove(); }, 2200);
+}
+
+// Calculadora
+let calcExpr = '', calcCurrent = '0', calcNewNum = true;
+
+function toggleCalc() {
+  const w = document.getElementById('calcWrap');
+  if (w) w.style.display = w.style.display==='none' ? 'block' : 'none';
+}
+
+function calcAction(btn) {
+  const exprEl = document.getElementById('calcExpr');
+  const resEl = document.getElementById('calcResult');
+  if (btn==='C') { calcExpr=''; calcCurrent='0'; calcNewNum=true; }
+  else if (btn==='⌫') {
+    if (!calcNewNum && calcCurrent.length > 1) {
+      calcCurrent = calcCurrent.slice(0, -1);
+    } else {
+      calcCurrent = '0'; calcNewNum = true;
+    }
+  }
+  else if (btn==='±') { calcCurrent = (parseFloat(calcCurrent)*-1).toString(); }
+  else if (btn==='%') { calcCurrent = (parseFloat(calcCurrent)/100).toString(); }
+  else if (btn==='=' ) {
+    try {
+      const expr = calcExpr + calcCurrent;
+      const result = Function('"use strict"; return (' + expr.replace(/÷/g,'/').replace(/×/g,'*') + ')')();
+      calcCurrent = parseFloat(result.toFixed(2)).toString();
+      calcExpr = '';
+      calcNewNum = true;
+    } catch(e) {}
+  }
+  else if (['+','-','÷','×'].includes(btn)) {
+    calcExpr += calcCurrent + btn;
+    calcNewNum = true;
+    calcCurrent = '0';
+  }
+  else if (btn===',') {
+    if (calcNewNum) { calcCurrent='0.'; calcNewNum=false; }
+    else if (!calcCurrent.includes('.')) calcCurrent += '.';
+  }
+  else {
+    if (calcNewNum) { calcCurrent=btn; calcNewNum=false; }
+    else calcCurrent = calcCurrent==='0' ? btn : calcCurrent+btn;
+  }
+  if (exprEl) exprEl.textContent = calcExpr;
+  if (resEl) resEl.textContent = parseFloat(calcCurrent).toLocaleString('pt-BR');
+}
+
+function usarResultado() {
+  const val = parseFloat(calcCurrent);
+  if (!isNaN(val) && val > 0) {
+    document.getElementById('inVal').value = val;
+    document.getElementById('calcWrap').style.display = 'none';
+  }
+}
+
+// Esconder header ao rolar
+let lastScroll = 0;
+window.addEventListener('scroll', () => {
+  const header = document.querySelector('.header');
+  const current = window.scrollY;
+  if (current > lastScroll && current > 50) header.classList.add('hidden');
+  else header.classList.remove('hidden');
+  lastScroll = current;
+}, { passive: true });
+
+load(); render();
+</script>
+</body>
+</html>
