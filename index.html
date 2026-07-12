@@ -299,7 +299,7 @@
 </div>
 
 <!-- Input oculto para importar arquivo -->
-<input type="file" id="importFileInput" accept=".json" style="display:none" onchange="importarJSON(event)">
+<input type="file" id="importFileInput" accept="*/*" style="display:none" onchange="importarJSON(event)">
 
 <script>
 const STORAGE_KEY = 'adiantamentos-v3';
@@ -353,14 +353,9 @@ function exportarJSON() {
     agora.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}).replace(':','-');
   const fileName = `adiantamentos-backup-${stamp}.json`;
 
-  const file = new File([blob], fileName, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: 'Backup Adiantamentos' }).catch(() => {
-      baixarJSON(blob, fileName);
-    });
-  } else {
-    baixarJSON(blob, fileName);
-  }
+  // Download direto para a pasta Downloads (igual ao Somar Notas),
+  // sem passar pelo "Abrir com" / compartilhar que bagunçava o arquivo.
+  baixarJSON(blob, fileName);
 }
 
 function baixarJSON(blob, fileName) {
