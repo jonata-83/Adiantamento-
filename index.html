@@ -350,7 +350,17 @@ function saldoInfo(saldo) {
 // No APK Capacitor usa os plugins nativos (rápido, igual ao Cubar Tora).
 // No navegador e no Median cai no navigator.share / download normal.
 function ehNativo() {
-  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const P = window.Capacitor && window.Capacitor.Plugins;
+  return !!(P && P.Share && P.Filesystem);
+}
+
+// O FileProvider do Android nao lida bem com espacos e acentos no nome.
+// O Cubar Tora sempre usou nomes limpos e por isso nunca travou.
+function nomeSeguro(nome) {
+  return String(nome)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_');
 }
 
 function blobParaBase64(blob) {
@@ -366,14 +376,19 @@ async function compartilharArquivo(blob, fileName, mime, titulo) {
   if (ehNativo()) {
     try {
       const plugins = window.Capacitor.Plugins;
+      const t0 = Date.now();
       const base64 = await blobParaBase64(blob);
+      const t1 = Date.now();
       const res = await plugins.Filesystem.writeFile({
-        path: fileName, data: base64, directory: 'CACHE'
+        path: nomeSeguro(fileName), data: base64, directory: 'CACHE'
       });
+      const t2 = Date.now();
+      showToast(Math.round(blob.size/1024) + 'kB · b64 ' + (t1-t0) + 'ms · gravar ' + (t2-t1) + 'ms');
       await plugins.Share.share({ title: titulo || fileName, files: [res.uri] });
       return;
     } catch (e) {
-      showToast('❌ ' + (e && e.message ? e.message : String(e)));
+      const msg = (e && e.message ? e.message : String(e));
+      if (msg.toLowerCase().indexOf('cancel') < 0) showToast('❌ ' + msg);
       return;
     }
   }
@@ -392,7 +407,7 @@ async function salvarArquivo(blob, fileName, mime) {
       const plugins = window.Capacitor.Plugins;
       const base64 = await blobParaBase64(blob);
       await plugins.Filesystem.writeFile({
-        path: fileName, data: base64, directory: 'DOCUMENTS'
+        path: nomeSeguro(fileName), data: base64, directory: 'DOCUMENTS'
       });
       showToast('✅ Salvo em Documentos');
       return;
