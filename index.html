@@ -43,6 +43,7 @@
     --shadow: 0 2px 16px rgba(0,0,0,0.08);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  #imgAbaOverlay img { -webkit-touch-callout: default !important; -webkit-user-select: auto !important; user-select: auto !important; }
   body {
     font-family: 'DM Sans', sans-serif;
     background: var(--bg);
@@ -304,6 +305,7 @@
 <input type="file" id="importFileInput" accept="*/*" style="display:none" onchange="importarJSON(event)">
 
 <script>
+const APP_VERSAO = 'v01';
 const STORAGE_KEY = 'adiantamentos-v3';
 let state = { pessoas: [], nextId: 1 };
 let currentTab = 'pessoas';
@@ -373,6 +375,18 @@ function blobParaBase64(blob) {
 }
 
 async function compartilharArquivo(blob, fileName, mime, titulo) {
+  // 1) navigator.share primeiro — e o caminho rapido, igual ao Somar Notas
+  try {
+    const file = new File([blob], fileName, { type: mime });
+    if (navigator.canShare && navigator.canShare({ files:[file] })) {
+      await navigator.share({ files:[file], title: titulo || fileName });
+      return;
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // usuario cancelou
+  }
+
+  // 2) APK sem navigator.share: plugins nativos do Capacitor
   if (ehNativo()) {
     try {
       const plugins = window.Capacitor.Plugins;
@@ -388,13 +402,9 @@ async function compartilharArquivo(blob, fileName, mime, titulo) {
       return;
     }
   }
-  const file = new File([blob], fileName, { type: mime });
-  if (navigator.canShare && navigator.canShare({ files:[file] })) {
-    navigator.share({ files:[file], title: titulo || fileName })
-      .catch(function(){ baixarBlob(blob, fileName); });
-  } else {
-    baixarBlob(blob, fileName);
-  }
+
+  // 3) Ultimo caso: baixa o arquivo
+  baixarBlob(blob, fileName);
 }
 
 async function salvarArquivo(blob, fileName, mime) {
@@ -612,7 +622,8 @@ function renderPessoas(el) {
     ? `<div class="empty" style="padding:32px"><p>Nenhuma pessoa encontrada<br>para "<strong>${esc(searchQuery)}</strong>"</p></div>`
     : '';
 
-  el.innerHTML = backupBar + searchBar + listaHTML + semResultado;
+  const rodape = `<div style="text-align:center;font-size:11px;color:#3a3a3a;padding:14px 0 2px">${APP_VERSAO}</div>`;
+  el.innerHTML = backupBar + searchBar + listaHTML + semResultado + rodape;
 }
 
 function onSearch(val) {
@@ -683,13 +694,13 @@ function renderDetalhe(el) {
           <span style="font-size:16px">📄</span>
           <span style="font-size:13px;font-weight:600">Exportar PDF</span>
         </div>
+        <div onclick="closeMenuPessoa();enviarTextoWhats(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px">💬</span>
+          <span style="font-size:13px;font-weight:600">Enviar texto no WhatsApp</span>
+        </div>
         <div onclick="closeMenuPessoa();showModalFundoPNG(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
           <span style="font-size:16px">🖼️</span>
           <span style="font-size:13px;font-weight:600">Exportar PNG</span>
-        </div>
-        <div onclick="closeMenuPessoa();enviarWhatsApp(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
-          <span style="font-size:16px">💬</span>
-          <span style="font-size:13px;font-weight:600">Enviar WhatsApp</span>
         </div>
         <div onclick="closeMenuPessoa();editPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
           <span style="font-size:16px">✏️</span>
@@ -1237,36 +1248,24 @@ function exportarPDFPessoa(id) {
   });
 }
 
-// - WHATSAPP (resumo em texto organizado) -
-// Usa a formatação do próprio WhatsApp (*negrito*) e emojis,
-// então a mensagem chega pronta para ler na conversa.
-async function compartilharTexto(texto, titulo) {
-  if (ehNativo()) {
-    try {
-      await window.Capacitor.Plugins.Share.share({ title: titulo, text: texto });
-      return;
-    } catch (e) {
-      const msg = (e && e.message ? e.message : String(e));
-      if (msg.toLowerCase().indexOf('cancel') < 0) showToast('❌ ' + msg);
-      return;
-    }
-  }
-  if (navigator.share) {
-    navigator.share({ text: texto }).catch(function(){});
-  } else if (navigator.clipboard) {
-    navigator.clipboard.writeText(texto)
-      .then(function(){ showToast('📋 Copiado! Cole no WhatsApp'); })
-      .catch(function(){ showToast('❌ Não foi possível copiar'); });
-  }
-}
+// Escala do PNG. 1.5 mantém a imagem nítida e reduz ~44% dos pixels
+// em relação a 2x — é o que mais pesava na hora de codificar o arquivo.
+const PNG_SCALE = 1;
+// JPEG a 92% gera arquivo bem menor que PNG e o WhatsApp recomprime tudo
+// para JPEG de qualquer jeito. Para voltar ao PNG: 'image/png' e null.
+const IMG_MIME = 'image/jpeg';
+const IMG_QUALIDADE = 0.92;
+const IMG_EXT = IMG_MIME === 'image/jpeg' ? '.jpg' : '.png';
 
-function gerarTextoWhatsApp(p) {
-  var fmtS = function(v) { return fmt(v).replace(',00',''); };
+// - TEXTO PARA WHATSAPP -
+// Sem arquivo nenhum: abre o WhatsApp com o texto pronto. E instantaneo.
+function textoPessoa(id) {
+  const p = getPessoa(id); if (!p) return '';
   const isFluxo = p.modo === 'fluxo';
   const sal = saldoP(p);
-  const label1 = isFluxo ? 'SAÍDA' : 'A RECEBER';
-  const label2 = isFluxo ? 'ENTRADA' : 'RECEBIDO';
-  const lancs = p.lancamentos.slice().sort((a, b) => {
+  const semCent = v => fmt(v).replace(',00','').replace('R$\u00a0','').replace('R$ ','').trim();
+
+  const lancs = p.lancamentos.slice().sort(function(a, b) {
     var toNum = function(d) {
       if (!d) return 0;
       var pts = d.split('/');
@@ -1277,41 +1276,37 @@ function gerarTextoWhatsApp(p) {
     return (a.ts||0) - (b.ts||0);
   });
 
-  const linhas = [];
-  linhas.push('*💰 ' + p.nome.toUpperCase() + '*');
-  linhas.push('📅 ' + hoje());
-  linhas.push('');
-  linhas.push((isFluxo ? '🟠' : '🔵') + ' *' + label1 + ':* ' + fmtS(totalEntradas(p)));
-  linhas.push('🟢 *' + label2 + ':* ' + fmtS(totalPagamentos(p)));
-  linhas.push('');
-  linhas.push('*—— MOVIMENTAÇÕES ——*');
-  if (lancs.length === 0) {
-    linhas.push('_Nenhuma movimentação_');
-  }
-  lancs.forEach(function(l) {
-    const isEnt = l.tipo === 'entrada';
-    const emoji = isEnt ? (isFluxo ? '🟠' : '🔵') : '🟢';
-    const sinal = isEnt ? '+' : '−';
-    const data = l.data ? l.data.slice(0,5) : '———';
-    const desc = l.descricao ? '  ' + l.descricao : '';
-    linhas.push(emoji + ' ' + sinal + ' ' + fmtS(l.valor) + '  ' + data + desc);
+  // Largura da coluna de valores para alinhar tudo
+  let larg = 0;
+  lancs.forEach(function(l){ const t = semCent(l.valor); if (t.length > larg) larg = t.length; });
+
+  const linhas = lancs.map(function(l) {
+    const sinal = l.tipo === 'entrada' ? '+' : '-';
+    const valor = semCent(l.valor).padStart(larg, ' ');
+    const data = (l.data ? l.data.slice(0,5) : '     ');
+    return sinal + ' ' + valor + '  ' + data + '  ' + l.descricao;
   });
-  linhas.push('');
-  linhas.push('━━━━━━━━━━━━━━');
-  if (sal > 0)      linhas.push('🔴 *SALDO: ' + fmtS(sal) + ' a receber*');
-  else if (sal < 0) linhas.push('🟣 *SALDO: ' + fmtS(Math.abs(sal)) + ' positivo*');
-  else              linhas.push('✅ *QUITADO*');
-  return linhas.join('\n');
+
+  const rot1 = isFluxo ? 'Saída' : 'A receber';
+  const rot2 = isFluxo ? 'Entrada' : 'Recebido';
+  const fecho = sal > 0 ? 'Saldo: ' + semCent(sal) + ' a receber'
+              : sal < 0 ? 'Saldo positivo: ' + semCent(Math.abs(sal))
+              : 'Quitado';
+
+  return '*' + p.nome + '*  ' + hoje() + '\n\n' +
+         '```\n' + linhas.join('\n') + '\n```\n' +
+         rot1 + ': ' + semCent(totalEntradas(p)) + '\n' +
+         rot2 + ': ' + semCent(totalPagamentos(p)) + '\n\n' +
+         '*' + fecho + '*';
 }
 
-function enviarWhatsApp(id) {
-  const p = getPessoa(id); if (!p) return;
-  compartilharTexto(gerarTextoWhatsApp(p), p.nome);
+function enviarTextoWhats(id) {
+  const txt = textoPessoa(id);
+  if (!txt) return;
+  const url = 'https://wa.me/?text=' + encodeURIComponent(txt);
+  const w = window.open(url, '_blank');
+  if (!w) window.location.href = url;
 }
-
-// Escala do PNG. 1.5 mantém a imagem nítida e reduz ~44% dos pixels
-// em relação a 2x — é o que mais pesava na hora de codificar o arquivo.
-const PNG_SCALE = 1.25;
 
 // Cores de fundo do PNG (sem faixas alternadas)
 const PNG_FUNDOS = {
@@ -1356,12 +1351,12 @@ function gerarPNGPessoa(id, fundo) {
     return (a.ts||0) - (b.ts||0);
   });
 
-  const W = 900;
-  const PAD = 40;
-  const LINE_H = 64;
-  const HEADER_H = 210;
-  const BODY_H = lancs.length * LINE_H + 70;
-  const H = HEADER_H + BODY_H + 70;
+  const W = 820;
+  const PAD = 32;
+  const LINE_H = 50;
+  const HEADER_H = 190;
+  const BODY_H = lancs.length * LINE_H + 60;
+  const H = HEADER_H + BODY_H + 50;
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(W*PNG_SCALE);
@@ -1395,7 +1390,7 @@ function gerarPNGPessoa(id, fundo) {
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW3 = (W - PAD*2 - 24) / 3;
-  var bY = 86, bH = 72;
+  var bY = 82, bH = 66;
 
   // Box 1
   var cor1bg = isFluxo ? '#fef3c7' : '#dbeafe';
@@ -1404,9 +1399,9 @@ function gerarPNGPessoa(id, fundo) {
   roundRect(ctx, PAD, bY, bW3, bH, 8);
   ctx.fillStyle = cor1tx;
   ctx.font = 'bold 13px sans-serif';
-  ctx.fillText(label1, PAD+12, bY+18);
+  ctx.fillText(label1, PAD+12, bY+17);
   ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+54);
+  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+50);
 
   // Box 2
   ctx.fillStyle = '#dcfce7';
@@ -1423,10 +1418,10 @@ function gerarPNGPessoa(id, fundo) {
   roundRect(ctx, PAD+bW3*2+24, bY, bW3, bH, 8);
   ctx.fillStyle = salCor;
   ctx.font = 'bold 13px sans-serif';
-  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+18);
+  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+17);
   ctx.font = 'bold 26px sans-serif';
   var salValor = sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado';
-  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+54);
+  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+50);
 
   // Seção movimentações
   let y = HEADER_H + 10;
@@ -1476,26 +1471,26 @@ function gerarPNGPessoa(id, fundo) {
     var sinal = isEnt ? '+' : '-';
     // Sinal
     ctx.textAlign = 'left';
-    ctx.fillText(sinal, COL_SINAL, y+36);
+    ctx.fillText(sinal, COL_SINAL, y+33);
     // R$
-    ctx.fillText('R$', COL_RS, y+36);
+    ctx.fillText('R$', COL_RS, y+33);
     // Parte inteira — alinhada à direita na COL_VIRGULA
     ctx.textAlign = 'right';
-    ctx.fillText(parteInt, COL_VIRGULA, y+36);
+    ctx.fillText(parteInt, COL_VIRGULA, y+33);
     // Parte decimal — alinhada à esquerda da COL_VIRGULA
     ctx.textAlign = 'left';
-    ctx.fillText(parteDec, COL_VIRGULA, y+36);
+    ctx.fillText(parteDec, COL_VIRGULA, y+33);
 
     // Data — logo depois do valor
     var dataCorta = l.data ? l.data.slice(0,5) : '';
     ctx.fillStyle = '#374151';
     ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(dataCorta, COL_DATA, y+36);
+    ctx.fillText(dataCorta, COL_DATA, y+33);
 
     // Descrição — depois da data, ocupando o resto da linha
     ctx.fillStyle = '#111827';
     ctx.font = '500 22px sans-serif';
-    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC - 10), COL_DESC, y+36);
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC - 10), COL_DESC, y+33);
 
     y += LINE_H;
   });
@@ -1514,7 +1509,7 @@ function gerarPNGPessoa(id, fundo) {
   // Prévia imediata: o canvas já pronto vai direto para a tela.
   // O arquivo PNG só é codificado quando o usuário toca em compartilhar.
   const stamp = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-  mostrarPreviewPNG(canvas, p.nome + '-' + stamp + '.jpg', p.nome);
+  mostrarPreviewPNG(canvas, p.nome + '-' + stamp + IMG_EXT, p.nome);
 }
 
 function mostrarPreviewPNG(canvas, fileName, titulo) {
@@ -1541,24 +1536,43 @@ function mostrarPreviewPNG(canvas, fileName, titulo) {
   overlay.querySelector('#pngPreviewBody').appendChild(canvas);
   document.body.appendChild(overlay);
 
-  // Codifica a imagem em segundo plano assim que a prévia abre.
-  // JPEG é muito mais rápido de codificar que PNG e gera arquivo bem menor,
-  // o que também acelera a conversão para Base64 e a gravação no cache.
-  // Quando o usuário toca em compartilhar, o arquivo já está pronto.
-  const imagemPronta = new Promise(function(res) {
-    canvas.toBlob(function(blob) { res(blob); }, 'image/jpeg', 0.92);
-  });
-
   document.getElementById('btnFecharPNG').onclick = () => overlay.remove();
-  document.getElementById('btnSalvarPNG').onclick = async () => {
-    showToast('💾 Salvando...');
-    const blob = await imagemPronta;
-    salvarArquivo(blob, fileName, 'image/jpeg');
+  document.getElementById('btnSalvarPNG').onclick = () => {
+    canvas.toBlob(function(blob) {
+      salvarArquivo(blob, fileName, IMG_MIME);
+      abrirImagemNaAba(blob, fileName);
+    }, IMG_MIME, IMG_QUALIDADE);
   };
-  document.getElementById('btnCompartilharPNG').onclick = async () => {
-    showToast('⏳ Preparando imagem...');
-    const blob = await imagemPronta;
-    compartilharArquivo(blob, fileName, 'image/jpeg', titulo);
+  document.getElementById('btnCompartilharPNG').onclick = () => {
+    canvas.toBlob(function(blob) {
+      compartilharArquivo(blob, fileName, IMG_MIME, titulo);
+    }, IMG_MIME, IMG_QUALIDADE);
+  };
+}
+
+// Abre a imagem numa tela propria, como se fosse outra aba.
+// Segurando o dedo na imagem o Android abre o menu dele
+// (salvar / compartilhar), que e bem mais rapido que a folha do app.
+function abrirImagemNaAba(blob, fileName) {
+  const old = document.getElementById('imgAbaOverlay');
+  if (old) old.remove();
+  const url = URL.createObjectURL(blob);
+  const overlay = document.createElement('div');
+  overlay.id = 'imgAbaOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:10000;display:flex;flex-direction:column;overflow:hidden;';
+  overlay.innerHTML = `
+    <div style="background:#1a3a5c;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <button id="btnFecharAba" style="background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;">✕</button>
+      <span style="color:#fff;font-weight:700;font-size:13px;">Segure na imagem para enviar</span>
+      <span style="width:28px"></span>
+    </div>
+    <div style="overflow:auto;flex:1;padding:12px;display:flex;align-items:flex-start;justify-content:center">
+      <img src="${url}" alt="${esc(fileName)}" style="max-width:100%;height:auto;display:block;border-radius:6px;-webkit-touch-callout:default;user-select:auto">
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('btnFecharAba').onclick = function() {
+    overlay.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
   };
 }
 
