@@ -1438,7 +1438,7 @@ function gerarPNGPessoa(id, fundo) {
   // Prévia imediata: o canvas já pronto vai direto para a tela.
   // O arquivo PNG só é codificado quando o usuário toca em compartilhar.
   const stamp = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
-  mostrarPreviewPNG(canvas, p.nome + '-' + stamp + '.png', p.nome);
+  mostrarPreviewPNG(canvas, p.nome + '-' + stamp + '.jpg', p.nome);
 }
 
 function mostrarPreviewPNG(canvas, fileName, titulo) {
@@ -1465,15 +1465,24 @@ function mostrarPreviewPNG(canvas, fileName, titulo) {
   overlay.querySelector('#pngPreviewBody').appendChild(canvas);
   document.body.appendChild(overlay);
 
+  // Codifica a imagem em segundo plano assim que a prévia abre.
+  // JPEG é muito mais rápido de codificar que PNG e gera arquivo bem menor,
+  // o que também acelera a conversão para Base64 e a gravação no cache.
+  // Quando o usuário toca em compartilhar, o arquivo já está pronto.
+  const imagemPronta = new Promise(function(res) {
+    canvas.toBlob(function(blob) { res(blob); }, 'image/jpeg', 0.92);
+  });
+
   document.getElementById('btnFecharPNG').onclick = () => overlay.remove();
-  document.getElementById('btnSalvarPNG').onclick = () => {
+  document.getElementById('btnSalvarPNG').onclick = async () => {
     showToast('💾 Salvando...');
-    canvas.toBlob(function(blob) { salvarArquivo(blob, fileName, 'image/png'); }, 'image/png');
+    const blob = await imagemPronta;
+    salvarArquivo(blob, fileName, 'image/jpeg');
   };
-  document.getElementById('btnCompartilharPNG').onclick = () => {
-    canvas.toBlob(function(blob) {
-      compartilharArquivo(blob, fileName, 'image/png', titulo);
-    }, 'image/png');
+  document.getElementById('btnCompartilharPNG').onclick = async () => {
+    showToast('⏳ Preparando imagem...');
+    const blob = await imagemPronta;
+    compartilharArquivo(blob, fileName, 'image/jpeg', titulo);
   };
 }
 
