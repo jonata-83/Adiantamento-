@@ -1280,11 +1280,25 @@ function textoPessoa(id) {
   let larg = 0;
   lancs.forEach(function(l){ const t = semCent(l.valor); if (t.length > larg) larg = t.length; });
 
+  // Descricao com largura fixa para as datas ficarem alinhadas no fim.
+  // Limite de 16 para a linha nao quebrar na tela do celular.
+  const DESC_MAX = 16;
+  let largDesc = 0;
+  lancs.forEach(function(l){
+    const d = l.descricao.length > DESC_MAX ? DESC_MAX : l.descricao.length;
+    if (d > largDesc) largDesc = d;
+  });
+
+  // A data vai no fim da linha: colada no valor o WhatsApp
+  // acha que e telefone e transforma tudo em link sublinhado.
   const linhas = lancs.map(function(l) {
     const sinal = l.tipo === 'entrada' ? '+' : '-';
     const valor = semCent(l.valor).padStart(larg, ' ');
-    const data = (l.data ? l.data.slice(0,5) : '     ');
-    return sinal + ' ' + valor + '  ' + data + '  ' + l.descricao;
+    let desc = l.descricao;
+    if (desc.length > DESC_MAX) desc = desc.slice(0, DESC_MAX - 1) + '…';
+    desc = desc.padEnd(largDesc, ' ');
+    const data = (l.data ? l.data.slice(0,5) : '');
+    return sinal + ' ' + valor + '  ' + desc + '  ' + data;
   });
 
   const rot1 = isFluxo ? 'Saída' : 'A receber';
