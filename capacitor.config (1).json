@@ -1,0 +1,9 @@
+{
+  "appId": "br.com.jl.adiantamentos",
+  "appName": "Adiantamentos",
+  "webDir": "www",
+  "server": {
+    "url": "https://jonata-83.github.io/Adiantamento-/",
+    "androidScheme": "https"
+  }
+}
