@@ -1243,7 +1243,7 @@ function exportarPDFPessoa(id) {
 
 // Escala do PNG. 1.5 mantém a imagem nítida e reduz ~44% dos pixels
 // em relação a 2x — é o que mais pesava na hora de codificar o arquivo.
-const PNG_SCALE = 1.25;
+const PNG_SCALE = 1;
 
 // Cores de fundo do PNG (sem faixas alternadas)
 const PNG_FUNDOS = {
@@ -1288,12 +1288,12 @@ function gerarPNGPessoa(id, fundo) {
     return (a.ts||0) - (b.ts||0);
   });
 
-  const W = 900;
-  const PAD = 40;
-  const LINE_H = 64;
-  const HEADER_H = 210;
-  const BODY_H = lancs.length * LINE_H + 70;
-  const H = HEADER_H + BODY_H + 70;
+  const W = 820;
+  const PAD = 32;
+  const LINE_H = 50;
+  const HEADER_H = 190;
+  const BODY_H = lancs.length * LINE_H + 60;
+  const H = HEADER_H + BODY_H + 50;
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(W*PNG_SCALE);
@@ -1327,7 +1327,7 @@ function gerarPNGPessoa(id, fundo) {
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW3 = (W - PAD*2 - 24) / 3;
-  var bY = 86, bH = 72;
+  var bY = 82, bH = 66;
 
   // Box 1
   var cor1bg = isFluxo ? '#fef3c7' : '#dbeafe';
@@ -1336,9 +1336,9 @@ function gerarPNGPessoa(id, fundo) {
   roundRect(ctx, PAD, bY, bW3, bH, 8);
   ctx.fillStyle = cor1tx;
   ctx.font = 'bold 13px sans-serif';
-  ctx.fillText(label1, PAD+12, bY+18);
+  ctx.fillText(label1, PAD+12, bY+17);
   ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+54);
+  ctx.fillText(fmtS(totalEntradas(p)), PAD+12, bY+50);
 
   // Box 2
   ctx.fillStyle = '#dcfce7';
@@ -1355,10 +1355,10 @@ function gerarPNGPessoa(id, fundo) {
   roundRect(ctx, PAD+bW3*2+24, bY, bW3, bH, 8);
   ctx.fillStyle = salCor;
   ctx.font = 'bold 13px sans-serif';
-  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+18);
+  ctx.fillText('SALDO', PAD+bW3*2+24+12, bY+17);
   ctx.font = 'bold 26px sans-serif';
   var salValor = sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado';
-  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+54);
+  ctx.fillText(salValor, PAD+bW3*2+24+12, bY+50);
 
   // Seção movimentações
   let y = HEADER_H + 10;
@@ -1408,26 +1408,26 @@ function gerarPNGPessoa(id, fundo) {
     var sinal = isEnt ? '+' : '-';
     // Sinal
     ctx.textAlign = 'left';
-    ctx.fillText(sinal, COL_SINAL, y+36);
+    ctx.fillText(sinal, COL_SINAL, y+33);
     // R$
-    ctx.fillText('R$', COL_RS, y+36);
+    ctx.fillText('R$', COL_RS, y+33);
     // Parte inteira — alinhada à direita na COL_VIRGULA
     ctx.textAlign = 'right';
-    ctx.fillText(parteInt, COL_VIRGULA, y+36);
+    ctx.fillText(parteInt, COL_VIRGULA, y+33);
     // Parte decimal — alinhada à esquerda da COL_VIRGULA
     ctx.textAlign = 'left';
-    ctx.fillText(parteDec, COL_VIRGULA, y+36);
+    ctx.fillText(parteDec, COL_VIRGULA, y+33);
 
     // Data — logo depois do valor
     var dataCorta = l.data ? l.data.slice(0,5) : '';
     ctx.fillStyle = '#374151';
     ctx.font = 'bold 18px sans-serif';
-    ctx.fillText(dataCorta, COL_DATA, y+36);
+    ctx.fillText(dataCorta, COL_DATA, y+33);
 
     // Descrição — depois da data, ocupando o resto da linha
     ctx.fillStyle = '#111827';
     ctx.font = '500 22px sans-serif';
-    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC - 10), COL_DESC, y+36);
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC - 10), COL_DESC, y+33);
 
     y += LINE_H;
   });
