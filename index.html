@@ -32,6 +32,8 @@
     --red-light: #3a1a1a;
     --orange: #f59e0b;
     --orange-light: #3a2a0a;
+    --purple: #a78bfa;
+    --purple-light: #2a1f3d;
     --text: #f0f0f0;
     --text-mid: #a0a0a0;
     --text-soft: #606060;
@@ -614,9 +616,13 @@ function renderDetalhe(el) {
           <span style="font-size:16px">📄</span>
           <span style="font-size:13px;font-weight:600">Exportar PDF</span>
         </div>
-        <div onclick="closeMenuPessoa();exportarPNGPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+        <div onclick="closeMenuPessoa();exportarPNGPessoa(${p.id},'limpo')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
           <span style="font-size:16px">🖼️</span>
           <span style="font-size:13px;font-weight:600">Exportar PNG</span>
+        </div>
+        <div onclick="closeMenuPessoa();exportarPNGPessoa(${p.id},'caderno')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
+          <span style="font-size:16px">📒</span>
+          <span style="font-size:13px;font-weight:600">Exportar PNG folha de caderno</span>
         </div>
         <div onclick="closeMenuPessoa();editPessoa(${p.id})" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #2a2a2a">
           <span style="font-size:16px">✏️</span>
@@ -1053,8 +1059,11 @@ function exportarPDFPessoa(id) {
   var COL_SINAL = 46;
   var COL_RS    = COL_SINAL + doc.getTextWidth('+') + 2;
   var COL_VIRGULA = COL_RS + doc.getTextWidth('R$ ') + maxW + 2;
-  var COL_DESC = COL_VIRGULA + doc.getTextWidth(',00') + 12;
-  var COL_DATA = 555;
+  // Ordem: valor -> data -> descrição
+  var COL_DATA  = COL_VIRGULA + doc.getTextWidth(',00') + 16;
+  var DATA_W    = doc.getTextWidth('00/00');
+  var COL_DESC  = COL_DATA + DATA_W + 18;
+  var LIM_DIR   = 555;
   var ROW_H = 20;
 
   lancs.forEach(function(l, i) {
@@ -1086,17 +1095,17 @@ function exportarPDFPessoa(id) {
     // Parte decimal
     if(parteDec) doc.text(parteDec, COL_VIRGULA, y+14);
 
+    // Data (logo após o valor)
+    doc.setTextColor(55,65,81);
+    doc.text(dataCorta, COL_DATA, y+14);
+
     // Descrição
     doc.setTextColor(17,24,39);
-    var maxDescW = COL_DATA - COL_DESC - 30;
+    var maxDescW = LIM_DIR - COL_DESC - 6;
     var desc = l.descricao;
     while(desc.length > 0 && doc.getTextWidth(desc) > maxDescW) desc = desc.slice(0,-1);
     if(desc.length < l.descricao.length) desc += '...';
     doc.text(desc, COL_DESC, y+14);
-
-    // Data
-    doc.setTextColor(55,65,81);
-    doc.text(dataCorta, COL_DATA, y+14, {align:'right'});
 
     y += ROW_H;
   });
@@ -1136,7 +1145,6 @@ function exportarPDFPessoa(id) {
         var isEnt = l.tipo==='entrada';
         var cor = isFluxo?(isEnt?'#d97706':'#15803d'):(isEnt?'#2563eb':'#15803d');
         var fmtd = fmtS(l.valor);
-        var semRS = fmtd.replace('R\u00a0$','').replace('R$ ','').trim();
         // Separar R$ do número
         var numPart = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
         var partes = numPart.split(',');
@@ -1148,8 +1156,8 @@ function exportarPDFPessoa(id) {
           '<td style="padding:5px 4px;white-space:nowrap;font-weight:700;color:'+cor+';font-family:monospace">'+
             sinal+'R$ <span style="display:inline-block;text-align:right;min-width:60px">'+intPart+'</span>'+decPart+
           '</td>'+
-          '<td style="padding:5px 8px;color:#111827;word-break:break-word">'+l.descricao+'</td>'+
-          '<td style="padding:5px 4px;white-space:nowrap;color:#374151;text-align:right;font-size:12px">'+dataCorta+'</td>'+
+          '<td style="padding:5px 8px;white-space:nowrap;color:#374151;font-size:12px">'+dataCorta+'</td>'+
+          '<td style="padding:5px 8px;color:#111827;word-break:break-word;width:100%">'+l.descricao+'</td>'+
         '</tr>';
       }).join('')}
     </table>
@@ -1162,7 +1170,19 @@ function exportarPDFPessoa(id) {
   });
 }
 
-function exportarPNGPessoa(id) {
+// Escala do PNG. 1.5 mantém a imagem nítida e reduz ~44% dos pixels
+// em relação a 2x — é o que mais pesava na hora de codificar o arquivo.
+const PNG_SCALE = 1.5;
+
+// estilo: 'limpo' (fundo branco) ou 'caderno' (folha pautada)
+function exportarPNGPessoa(id, estilo) {
+  showToast('🖼️ Gerando imagem...');
+  // Deixa o toast aparecer antes de travar a thread desenhando o canvas
+  setTimeout(function(){ gerarPNGPessoa(id, estilo || 'limpo'); }, 40);
+}
+
+function gerarPNGPessoa(id, estilo) {
+  const caderno = estilo === 'caderno';
   // Formata valor sem os centavos ,00
   var fmtS = function(v) {
     var s = fmt(v);
@@ -1173,8 +1193,6 @@ function exportarPNGPessoa(id) {
   const sal = saldoP(p);
   const label1 = isFluxo ? 'SAÍDA' : 'A RECEBER';
   const label2 = isFluxo ? 'ENTRADA' : 'RECEBIDO';
-  const cor1 = isFluxo ? '#f59e0b' : '#4d8ef0';
-  const bg1  = isFluxo ? '#3a2a0a' : '#1e3a6e';
   const lancs = p.lancamentos.slice().sort((a, b) => {
     var toNum = function(d) {
       if (!d) return 0;
@@ -1187,21 +1205,47 @@ function exportarPNGPessoa(id) {
   });
 
   const W = 900;
-  const PAD = 40;
+  const PAD = caderno ? 62 : 40;
   const LINE_H = 64;
   const HEADER_H = 210;
   const BODY_H = lancs.length * LINE_H + 70;
   const H = HEADER_H + BODY_H + 70;
 
   const canvas = document.createElement('canvas');
-  canvas.width = W*2; canvas.height = H*2;
-  canvas.style.width = W+'px'; canvas.style.height = H+'px';
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2,2);
+  canvas.width = Math.round(W*PNG_SCALE);
+  canvas.height = Math.round(H*PNG_SCALE);
+  // alpha:false = canvas opaco: desenha e codifica o PNG bem mais rápido
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.scale(PNG_SCALE, PNG_SCALE);
 
-  // Fundo branco
-  ctx.fillStyle = '#ffffff';
+  // Fundo
+  ctx.fillStyle = caderno ? '#fdfbf2' : '#ffffff';
   ctx.fillRect(0, 0, W, H);
+
+  const ROW_Y0 = HEADER_H + 38; // topo da primeira movimentação
+
+  if (caderno) {
+    // Pautas — espaçadas 32px e posicionadas para o texto "sentar" na linha
+    const GAP = 32;
+    const off = (ROW_Y0 + 40) % GAP;
+    ctx.strokeStyle = '#cddff0';
+    ctx.lineWidth = 1;
+    for (var ry = off; ry < H - 16; ry += GAP) {
+      ctx.beginPath();
+      ctx.moveTo(PAD - 16, ry);
+      ctx.lineTo(W - 24, ry);
+      ctx.stroke();
+    }
+    // Margem vermelha
+    ctx.strokeStyle = '#eda9a4';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(PAD - 22, 0); ctx.lineTo(PAD - 22, H); ctx.stroke();
+    // Furos do fichário
+    ctx.fillStyle = '#eeebdd';
+    [H*0.16, H*0.5, H*0.84].forEach(function(hy){
+      ctx.beginPath(); ctx.arc(18, hy, 9, 0, Math.PI*2); ctx.fill();
+    });
+  }
 
   // Data pequena
   ctx.fillStyle = '#6b7280';
@@ -1218,7 +1262,7 @@ function exportarPNGPessoa(id) {
   const salCor   = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
 
   // Linha divisória
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = caderno ? '#c9c2ab' : '#e5e7eb';
   ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(PAD, 76); ctx.lineTo(W-PAD, 76); ctx.stroke();
 
@@ -1242,9 +1286,9 @@ function exportarPNGPessoa(id) {
   roundRect(ctx, PAD+bW3+12, bY, bW3, bH, 8);
   ctx.fillStyle = '#15803d';
   ctx.font = 'bold 13px sans-serif';
-  ctx.fillText(label2, PAD+bW3+12, bY+18);
+  ctx.fillText(label2, PAD+bW3+12+12, bY+18);
   ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+12, bY+54);
+  ctx.fillText(fmtS(totalPagamentos(p)), PAD+bW3+12+12, bY+54);
 
   // Box 3 — SALDO
   var salBg = sal > 0 ? '#fee2e2' : sal < 0 ? '#ede9fe' : '#dcfce7';
@@ -1259,18 +1303,18 @@ function exportarPNGPessoa(id) {
 
   // Seção movimentações
   let y = HEADER_H + 10;
-  ctx.fillStyle = '#b0b5b2';
+  ctx.fillStyle = caderno ? '#9a927c' : '#b0b5b2';
   ctx.font = 'bold 13px sans-serif';
   ctx.fillText('MOVIMENTAÇÕES', PAD, y);
   y += 18;
 
   // linha fina
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = caderno ? '#c9c2ab' : '#e5e7eb';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W-PAD, y); ctx.stroke();
   y += 10;
 
-  // Lançamentos
+  // Colunas: valor -> data -> descrição
   ctx.font = 'bold 24px monospace';
   const COL_SINAL = PAD + 18;
   const COL_RS    = COL_SINAL + ctx.measureText('+').width + 4;
@@ -1282,20 +1326,23 @@ function exportarPNGPessoa(id) {
     var w = ctx.measureText(parteInteira).width;
     if(w > maxInteiroW) maxInteiroW = w;
   });
-  var COL_VIRGULA = COL_RS + ctx.measureText('R$ ').width + maxInteiroW + 4;
+  const COL_VIRGULA = COL_RS + ctx.measureText('R$ ').width + maxInteiroW + 4;
+  const FIM_VALOR = COL_VIRGULA + ctx.measureText(',00').width;
+  ctx.font = 'bold 18px sans-serif';
+  const COL_DATA = FIM_VALOR + 28;
+  const COL_DESC = COL_DATA + ctx.measureText('00/00').width + 24;
 
   lancs.forEach(function(l, i) {
     const isEnt = l.tipo === 'entrada';
     const corLanc = isFluxo
       ? (isEnt ? '#d97706' : '#15803d')
       : (isEnt ? '#2563eb' : '#15803d');
-    const tipoTxt = isFluxo
-      ? (isEnt ? 'Saída' : 'Entrada')
-      : (isEnt ? 'Adiantamento' : 'Pagamento');
 
-    // Fundo alternado
-    ctx.fillStyle = i % 2 === 0 ? '#f9fafb' : '#ffffff';
-    roundRect(ctx, PAD, y, W-PAD*2, LINE_H-4, 8);
+    // Fundo alternado (na folha de caderno as pautas ficam à mostra)
+    if (!caderno) {
+      ctx.fillStyle = i % 2 === 0 ? '#f9fafb' : '#ffffff';
+      roundRect(ctx, PAD, y, W-PAD*2, LINE_H-4, 8);
+    }
 
     // Valor à esquerda — alinhado pelo decimal
     ctx.fillStyle = corLanc;
@@ -1317,42 +1364,40 @@ function exportarPNGPessoa(id) {
     // Parte decimal — alinhada à esquerda da COL_VIRGULA
     ctx.textAlign = 'left';
     ctx.fillText(parteDec, COL_VIRGULA, y+36);
-    ctx.textAlign = 'left';
 
-    // Data curta no fim da linha
+    // Data — logo depois do valor
     var dataCorta = l.data ? l.data.slice(0,5) : '';
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = caderno ? '#4b5563' : '#374151';
     ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(dataCorta, W-PAD, y+36);
-    ctx.textAlign = 'left';
+    ctx.fillText(dataCorta, COL_DATA, y+36);
 
-    // Descrição à esquerda, logo após a coluna decimal
-    var colDescStart = COL_VIRGULA + ctx.measureText(',00').width + 36;
+    // Descrição — depois da data, ocupando o resto da linha
     ctx.fillStyle = '#111827';
     ctx.font = '500 22px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(truncate(ctx, l.descricao, W - PAD - colDescStart - 10), colDescStart, y+36);
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC - 10), COL_DESC, y+36);
 
     y += LINE_H;
   });
 
   // Linha total
   y += 10;
-  ctx.strokeStyle = '#e5e7eb';
+  ctx.strokeStyle = caderno ? '#c9c2ab' : '#e5e7eb';
   ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(PAD,y); ctx.lineTo(W-PAD,y); ctx.stroke();
   y += 28;
   ctx.fillStyle = salCor;
   ctx.font = 'bold 26px monospace';
+  ctx.textAlign = 'left';
   ctx.fillText(salLabel, PAD, y);
 
   // Exportar
   canvas.toBlob(blob => {
     const agora = new Date();
     const stamp = agora.toLocaleDateString('pt-BR').replace(/\//g,'-');
-    const fileName = `${p.nome}-${stamp}.png`;
+    const fileName = `${p.nome}${caderno?'-caderno':''}-${stamp}.png`;
     const file = new File([blob], fileName, { type:'image/png' });
+    // Libera a memória do canvas assim que o blob está pronto
+    canvas.width = canvas.height = 0;
     if (navigator.canShare && navigator.canShare({files:[file]})) {
       navigator.share({files:[file], title: p.nome}).catch(()=>baixarBlob(blob,fileName));
     } else {
