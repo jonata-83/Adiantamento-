@@ -1264,6 +1264,10 @@ function textoPessoa(id) {
   const isFluxo = p.modo === 'fluxo';
   const sal = saldoP(p);
   const semCent = v => fmt(v).replace(',00','').replace('R$\u00a0','').replace('R$ ','').trim();
+  // O WhatsApp vira o numero em link e troca a fonte daquele trecho,
+  // o que desalinha a coluna. Um caractere invisivel no meio do numero
+  // impede o reconhecimento sem ocupar espaco nenhum.
+  const semLink = t => t.replace(/(\d)/, '$1\u200B');
 
   const lancs = p.lancamentos.slice().sort(function(a, b) {
     var toNum = function(d) {
@@ -1283,7 +1287,7 @@ function textoPessoa(id) {
   // Sem data: a linha fica curta e a descricao cabe inteira.
   const linhas = lancs.map(function(l) {
     const sinal = l.tipo === 'entrada' ? '+' : '-';
-    const valor = semCent(l.valor).padStart(larg + 1, ' ');
+    const valor = semLink(semCent(l.valor).padStart(larg + 1, ' '));
     return sinal + valor + '  ' + l.descricao;
   });
 
@@ -1299,7 +1303,7 @@ function textoPessoa(id) {
   const largTot = Math.max(larg + 1, t1.length, t2.length, t3.length);
   const largRot = Math.max(rot1.length, rot2.length, rot3.length);
   const linhaTotal = function(rot, val) {
-    return rot.padEnd(largRot, ' ') + '  ' + val.padStart(largTot, ' ');
+    return rot.padEnd(largRot, ' ') + '  ' + semLink(val.padStart(largTot, ' '));
   };
 
   const traco = '-'.repeat(largRot + 2 + largTot);
