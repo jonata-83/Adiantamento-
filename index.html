@@ -1267,7 +1267,7 @@ function textoPessoa(id) {
   // O WhatsApp vira o numero em link e troca a fonte daquele trecho,
   // o que desalinha a coluna. Um caractere invisivel no meio do numero
   // impede o reconhecimento sem ocupar espaco nenhum.
-  const semLink = t => t.replace(/(\d)/, '$1\u200B');
+  const semLink = t => t.replace(/(\d)(?=[\d.])/g, '$1\u200B');
 
   const lancs = p.lancamentos.slice().sort(function(a, b) {
     var toNum = function(d) {
