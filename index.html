@@ -1596,7 +1596,7 @@ function showToast(msg) {
   if (old) old.remove();
   const t = document.createElement('div');
   t.id = 'toast';
-  t.style.cssText = 'position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;z-index:999;white-space:nowrap;font-family:DM Sans,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+  t.style.cssText = 'position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:50px;font-size:13px;font-weight:600;z-index:10001;white-space:nowrap;font-family:DM Sans,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(function(){ if(t)t.remove(); }, 2200);
