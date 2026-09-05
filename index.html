@@ -1289,14 +1289,32 @@ function textoPessoa(id) {
 
   const rot1 = isFluxo ? 'Saída' : 'A receber';
   const rot2 = isFluxo ? 'Entrada' : 'Recebido';
+  const rot3 = sal < 0 ? 'Positivo' : 'Saldo';
+
+  // Totais na mesma grade das movimentacoes: rotulo a esquerda,
+  // valor alinhado pela direita na mesma coluna dos lancamentos.
+  const t1 = semCent(totalEntradas(p));
+  const t2 = semCent(totalPagamentos(p));
+  const t3 = sal !== 0 ? semCent(Math.abs(sal)) : '0';
+  const largTot = Math.max(larg + 1, t1.length, t2.length, t3.length);
+  const largRot = Math.max(rot1.length, rot2.length, rot3.length);
+  const linhaTotal = function(rot, val) {
+    return rot.padEnd(largRot, ' ') + '  ' + val.padStart(largTot, ' ');
+  };
+
+  const traco = '-'.repeat(largRot + 2 + largTot);
   const fecho = sal > 0 ? 'Saldo: ' + semCent(sal) + ' a receber'
               : sal < 0 ? 'Saldo positivo: ' + semCent(Math.abs(sal))
               : 'Quitado';
 
   return '*' + p.nome + '*  ' + hoje() + '\n\n' +
-         '```\n' + linhas.join('\n') + '\n```\n' +
-         rot1 + ': ' + semCent(totalEntradas(p)) + '\n' +
-         rot2 + ': ' + semCent(totalPagamentos(p)) + '\n\n' +
+         '```\n' +
+         linhas.join('\n') + '\n' +
+         traco + '\n' +
+         linhaTotal(rot1, t1) + '\n' +
+         linhaTotal(rot2, t2) + '\n' +
+         linhaTotal(rot3, t3) + '\n' +
+         '```\n' +
          '*' + fecho + '*';
 }
 
