@@ -346,6 +346,64 @@ function saldoInfo(saldo) {
   return               { cls: 'saldo-zerado',  label: '✅ Quitado', desc: '' };
 }
 
+// - COMPARTILHAMENTO -
+// No APK Capacitor usa os plugins nativos (rápido, igual ao Cubar Tora).
+// No navegador e no Median cai no navigator.share / download normal.
+function ehNativo() {
+  return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+
+function blobParaBase64(blob) {
+  return new Promise(function(res, rej) {
+    const r = new FileReader();
+    r.onload = function(){ res(String(r.result).split(',')[1]); };
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function compartilharArquivo(blob, fileName, mime, titulo) {
+  if (ehNativo()) {
+    try {
+      const plugins = window.Capacitor.Plugins;
+      const base64 = await blobParaBase64(blob);
+      const res = await plugins.Filesystem.writeFile({
+        path: fileName, data: base64, directory: 'CACHE'
+      });
+      await plugins.Share.share({ title: titulo || fileName, files: [res.uri] });
+      return;
+    } catch (e) {
+      showToast('❌ Falha ao compartilhar');
+      return;
+    }
+  }
+  const file = new File([blob], fileName, { type: mime });
+  if (navigator.canShare && navigator.canShare({ files:[file] })) {
+    navigator.share({ files:[file], title: titulo || fileName })
+      .catch(function(){ baixarBlob(blob, fileName); });
+  } else {
+    baixarBlob(blob, fileName);
+  }
+}
+
+async function salvarArquivo(blob, fileName, mime) {
+  if (ehNativo()) {
+    try {
+      const plugins = window.Capacitor.Plugins;
+      const base64 = await blobParaBase64(blob);
+      await plugins.Filesystem.writeFile({
+        path: fileName, data: base64, directory: 'DOCUMENTS'
+      });
+      showToast('✅ Salvo em Documentos');
+      return;
+    } catch (e) {
+      showToast('❌ Falha ao salvar');
+      return;
+    }
+  }
+  baixarBlob(blob, fileName);
+}
+
 // - BACKUP / RESTORE -
 function nomeBackup() {
   const agora = new Date();
@@ -355,35 +413,15 @@ function nomeBackup() {
 }
 
 function exportarJSON() {
-  const dataStr = JSON.stringify(state, null, 2);
-  const blob = new Blob([dataStr], { type: 'application/json' });
-  // Download direto para a pasta Downloads (igual ao Somar Notas),
-  // sem passar pelo "Abrir com" / compartilhar que bagunçava o arquivo.
-  baixarJSON(blob, nomeBackup());
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  salvarArquivo(blob, nomeBackup(), 'application/json');
 }
 
 // Abre a folha de compartilhamento: é por aqui que aparece o Meu Drive,
 // o WhatsApp e o Gmail. O "Abrir com" do download não lista o Drive.
 function compartilharJSON() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-  const fileName = nomeBackup();
-  const file = new File([blob], fileName, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files:[file] })) {
-    navigator.share({ files:[file], title:'Backup Adiantamentos' })
-      .catch(()=>baixarJSON(blob, fileName));
-  } else {
-    showToast('Compartilhamento indisponível — baixando');
-    baixarJSON(blob, fileName);
-  }
-}
-
-function baixarJSON(blob, fileName) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fileName;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  compartilharArquivo(blob, nomeBackup(), 'application/json', 'Backup Adiantamentos');
 }
 
 function abrirImportar() {
@@ -1423,17 +1461,12 @@ function mostrarPreviewPNG(canvas, fileName, titulo) {
   document.getElementById('btnFecharPNG').onclick = () => overlay.remove();
   document.getElementById('btnSalvarPNG').onclick = () => {
     showToast('💾 Salvando...');
-    canvas.toBlob(function(blob) { baixarBlob(blob, fileName); }, 'image/png');
+    canvas.toBlob(function(blob) { salvarArquivo(blob, fileName, 'image/png'); }, 'image/png');
   };
   document.getElementById('btnCompartilharPNG').onclick = () => {
     showToast('📤 Preparando arquivo...');
     canvas.toBlob(function(blob) {
-      const file = new File([blob], fileName, { type:'image/png' });
-      if (navigator.canShare && navigator.canShare({files:[file]})) {
-        navigator.share({files:[file], title: titulo}).catch(()=>baixarBlob(blob, fileName));
-      } else {
-        baixarBlob(blob, fileName);
-      }
+      compartilharArquivo(blob, fileName, 'image/png', titulo);
     }, 'image/png');
   };
 }
@@ -1487,17 +1520,7 @@ function mostrarPreview(htmlContent, gerarPDF) {
 }
 
 function compartilharPDF(blob, fileName) {
-  const file = new File([blob], fileName, {type:'application/pdf'});
-  if (navigator.canShare && navigator.canShare({files:[file]})) {
-    navigator.share({files:[file], title:'Adiantamentos'}).catch(()=>{});
-  } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  }
+  compartilharArquivo(blob, fileName, 'application/pdf', 'Adiantamentos');
 }
 
 // - Gesture engine -
