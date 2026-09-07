@@ -305,7 +305,7 @@
 <input type="file" id="importFileInput" accept="*/*" style="display:none" onchange="importarJSON(event)">
 
 <script>
-const APP_VERSAO = 'v02';
+const APP_VERSAO = 'v03';
 const STORAGE_KEY = 'adiantamentos-v3';
 let state = { pessoas: [], nextId: 1 };
 let currentTab = 'pessoas';
@@ -1359,6 +1359,24 @@ function exportarPNGPessoa(id, fundo) {
 // - MODELO SIMPLES -
 // Fundo branco, cabecalho com nome + data.
 // Cada linha: valor, data, descricao. Resumo no rodape.
+// Quebra a descricao em ate maxLinhas, respeitando a largura disponivel.
+function quebrarTexto(ctx, texto, maxW, maxLinhas) {
+  var palavras = String(texto == null ? '' : texto).split(/\s+/).filter(Boolean);
+  if (!palavras.length) return [''];
+  var linhas = [], atual = '';
+  palavras.forEach(function(w) {
+    var teste = atual ? atual + ' ' + w : w;
+    if (!atual || ctx.measureText(teste).width <= maxW) atual = teste;
+    else { linhas.push(atual); atual = w; }
+  });
+  if (atual) linhas.push(atual);
+  if (linhas.length > maxLinhas) {
+    linhas = linhas.slice(0, maxLinhas);
+    linhas[maxLinhas-1] = linhas[maxLinhas-1] + ' …';
+  }
+  return linhas.map(function(l) { return truncate(ctx, l, maxW); });
+}
+
 function gerarPNGSimples(id) {
   const p = getPessoa(id); if (!p) return;
   const isFluxo = p.modo === 'fluxo';
@@ -1401,7 +1419,7 @@ function gerarPNGSimples(id) {
   const DESC_FONT = 'bold 33px sans-serif';
   const ROT_FONT  = 'bold 30px sans-serif';
 
-  // Mede tudo antes de definir a largura do canvas
+  // Mede as colunas antes de definir a largura do canvas
   const meas = document.createElement('canvas').getContext('2d');
 
   meas.font = VAL_FONT;
@@ -1420,14 +1438,6 @@ function gerarPNGSimples(id) {
   meas.font = DATA_FONT;
   const wData = meas.measureText('00/00').width;
 
-  meas.font = DESC_FONT;
-  var maxDesc = 0;
-  lancs.forEach(function(l) {
-    var w = meas.measureText(l.descricao).width;
-    if (w > maxDesc) maxDesc = w;
-  });
-  if (maxDesc > 620) maxDesc = 620; // teto: descricao muito longa e cortada
-
   meas.font = ROT_FONT;
   var maxRot = Math.max(
     meas.measureText(rot1).width,
@@ -1436,24 +1446,38 @@ function gerarPNGSimples(id) {
   );
 
   meas.font = NOME_FONT;
-  const wNome = meas.measureText(p.nome).width;
+  var wNome = meas.measureText(p.nome).width;
   meas.font = DT_FONT;
   const wDt = meas.measureText(hoje()).width;
 
-  const PAD = 40, LINE_H = 56, TOPO = 152;
+  const PAD = 40, LINE_H = 58, LINE_H2 = 40, TOPO = 152;
   const COL_SINAL   = PAD;
   const COL_INT_FIM = COL_SINAL + wSinal + maxInt;
   const COL_DATA    = COL_INT_FIM + maxDec + 24;
   const COL_DESC    = COL_DATA + wData + 24;
 
-  // Largura sob medida: quanto mais estreita, maior o texto no balao
+  // Largura FIXA: nao cresce com a descricao. Assim o texto sai sempre
+  // do mesmo tamanho no balao do WhatsApp. Descricao comprida quebra
+  // em duas linhas em vez de esticar a imagem e encolher tudo.
+  const ESPACO_DESC = 330;
   const W = Math.ceil(Math.max(
-    COL_DESC + maxDesc + PAD,
+    COL_DESC + ESPACO_DESC + PAD,
     COL_DATA + maxRot + PAD,
-    PAD + wNome + 48 + wDt + PAD,
-    560
+    620
   ));
-  const H = TOPO + lancs.length * LINE_H + 200;
+  const MAX_DESC_W = W - PAD - COL_DESC;
+
+  // Quebra as descricoes e ja calcula a altura real
+  meas.font = DESC_FONT;
+  const linhasDesc = lancs.map(function(l) {
+    return quebrarTexto(meas, l.descricao, MAX_DESC_W, 2);
+  });
+  var alturaLista = 0;
+  linhasDesc.forEach(function(ls) {
+    alturaLista += LINE_H + (ls.length - 1) * LINE_H2;
+  });
+
+  const H = TOPO + alturaLista + 200;
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(W * ESC);
@@ -1469,7 +1493,7 @@ function gerarPNGSimples(id) {
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111827';
   ctx.font = NOME_FONT;
-  ctx.fillText(p.nome, PAD, 64);
+  ctx.fillText(truncate(ctx, p.nome, W - PAD*2 - wDt - 24), PAD, 64);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#6b7280';
   ctx.font = DT_FONT;
@@ -1481,7 +1505,7 @@ function gerarPNGSimples(id) {
 
   // Lancamentos: valor -> data -> descricao
   var y = TOPO;
-  lancs.forEach(function(l) {
+  lancs.forEach(function(l, i) {
     var isEnt = l.tipo === 'entrada';
     var cor = isFluxo
       ? (isEnt ? '#d97706' : '#15803d')
@@ -1503,9 +1527,12 @@ function gerarPNGSimples(id) {
 
     ctx.fillStyle = '#111827';
     ctx.font = DESC_FONT;
-    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC), COL_DESC, y);
+    var ls = linhasDesc[i];
+    ls.forEach(function(txt, k) {
+      ctx.fillText(txt, COL_DESC, y + k * LINE_H2);
+    });
 
-    y += LINE_H;
+    y += LINE_H + (ls.length - 1) * LINE_H2;
   });
 
   // Traco separando lancamentos do resumo
