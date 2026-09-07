@@ -622,7 +622,7 @@ function renderPessoas(el) {
     ? `<div class="empty" style="padding:32px"><p>Nenhuma pessoa encontrada<br>para "<strong>${esc(searchQuery)}</strong>"</p></div>`
     : '';
 
-  const rodape = `<div style="text-align:center;font-size:11px;color:#3a3a3a;padding:14px 0 2px">${APP_VERSAO}</div>`;
+  const rodape = `<div style="text-align:center;padding:16px 0 4px"><span style="display:inline-block;font-size:14px;font-weight:700;letter-spacing:1px;color:#90b4e8;background:#1e3a6e;border:1px solid #2f5296;border-radius:50px;padding:5px 16px">${APP_VERSAO}</span></div>`;
   el.innerHTML = backupBar + searchBar + listaHTML + semResultado + rodape;
 }
 
@@ -1364,6 +1364,9 @@ function gerarPNGSimples(id) {
   const isFluxo = p.modo === 'fluxo';
   const sal = saldoP(p);
 
+  // Escala so deste modelo: 2x deixa o texto nitido na tela do celular
+  const ESC = 2;
+
   // Numero puro, sem R$ e sem os centavos ,00
   const num = function(v) {
     return fmt(v).replace(',00','').replace('R$\u00a0','').replace('R$ ','').trim();
@@ -1389,13 +1392,18 @@ function gerarPNGSimples(id) {
   const rot3 = sal > 0 ? 'Saldo a receber' : sal < 0 ? 'Saldo positivo' : 'Quitado';
   const corSal = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
 
-  const VAL_FONT  = 'bold 27px monospace';
-  const DATA_FONT = 'bold 19px sans-serif';
-  const DESC_FONT = '500 23px sans-serif';
-  const ROT_FONT  = 'bold 22px sans-serif';
+  // Fontes grandes em relacao a largura: e isso que deixa o texto
+  // do tamanho do WhatsApp quando a imagem entra no balao da conversa.
+  const NOME_FONT = 'bold 42px sans-serif';
+  const DT_FONT   = 'bold 27px sans-serif';
+  const VAL_FONT  = 'bold 36px monospace';
+  const DATA_FONT = 'bold 26px sans-serif';
+  const DESC_FONT = 'bold 33px sans-serif';
+  const ROT_FONT  = 'bold 30px sans-serif';
 
-  // Mede as colunas antes de criar o canvas final
+  // Mede tudo antes de definir a largura do canvas
   const meas = document.createElement('canvas').getContext('2d');
+
   meas.font = VAL_FONT;
   const wSinal = meas.measureText('+ ').width;
   var maxInt = 0, maxDec = 0;
@@ -1408,21 +1416,50 @@ function gerarPNGSimples(id) {
     if (wi > maxInt) maxInt = wi;
     if (wd > maxDec) maxDec = wd;
   });
+
   meas.font = DATA_FONT;
   const wData = meas.measureText('00/00').width;
 
-  const W = 820, PAD = 36, LINE_H = 46, TOPO = 112;
-  const COL_SINAL  = PAD;
+  meas.font = DESC_FONT;
+  var maxDesc = 0;
+  lancs.forEach(function(l) {
+    var w = meas.measureText(l.descricao).width;
+    if (w > maxDesc) maxDesc = w;
+  });
+  if (maxDesc > 620) maxDesc = 620; // teto: descricao muito longa e cortada
+
+  meas.font = ROT_FONT;
+  var maxRot = Math.max(
+    meas.measureText(rot1).width,
+    meas.measureText(rot2).width,
+    meas.measureText(rot3).width
+  );
+
+  meas.font = NOME_FONT;
+  const wNome = meas.measureText(p.nome).width;
+  meas.font = DT_FONT;
+  const wDt = meas.measureText(hoje()).width;
+
+  const PAD = 40, LINE_H = 56, TOPO = 152;
+  const COL_SINAL   = PAD;
   const COL_INT_FIM = COL_SINAL + wSinal + maxInt;
-  const COL_DATA   = COL_INT_FIM + maxDec + 26;
-  const COL_DESC   = COL_DATA + wData + 26;
-  const H = TOPO + lancs.length * LINE_H + 158;
+  const COL_DATA    = COL_INT_FIM + maxDec + 24;
+  const COL_DESC    = COL_DATA + wData + 24;
+
+  // Largura sob medida: quanto mais estreita, maior o texto no balao
+  const W = Math.ceil(Math.max(
+    COL_DESC + maxDesc + PAD,
+    COL_DATA + maxRot + PAD,
+    PAD + wNome + 48 + wDt + PAD,
+    560
+  ));
+  const H = TOPO + lancs.length * LINE_H + 200;
 
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(W * PNG_SCALE);
-  canvas.height = Math.round(H * PNG_SCALE);
+  canvas.width = Math.round(W * ESC);
+  canvas.height = Math.round(H * ESC);
   const ctx = canvas.getContext('2d', { alpha: false });
-  ctx.scale(PNG_SCALE, PNG_SCALE);
+  ctx.scale(ESC, ESC);
 
   // Fundo branco
   ctx.fillStyle = '#ffffff';
@@ -1431,16 +1468,16 @@ function gerarPNGSimples(id) {
   // Cabecalho: nome grande a esquerda, data a direita
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111827';
-  ctx.font = 'bold 32px sans-serif';
-  ctx.fillText(p.nome, PAD, 54);
+  ctx.font = NOME_FONT;
+  ctx.fillText(p.nome, PAD, 64);
   ctx.textAlign = 'right';
   ctx.fillStyle = '#6b7280';
-  ctx.font = 'bold 20px sans-serif';
-  ctx.fillText(hoje(), W - PAD, 54);
+  ctx.font = DT_FONT;
+  ctx.fillText(hoje(), W - PAD, 64);
 
   ctx.strokeStyle = '#d1d5db';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(PAD, 74); ctx.lineTo(W - PAD, 74); ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(PAD, 92); ctx.lineTo(W - PAD, 92); ctx.stroke();
 
   // Lancamentos: valor -> data -> descricao
   var y = TOPO;
@@ -1460,7 +1497,7 @@ function gerarPNGSimples(id) {
     ctx.textAlign = 'left';
     if (pt.d) ctx.fillText(pt.d, COL_INT_FIM, y);
 
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle = '#4b5563';
     ctx.font = DATA_FONT;
     ctx.fillText(l.data ? l.data.slice(0,5) : '', COL_DATA, y);
 
@@ -1472,11 +1509,11 @@ function gerarPNGSimples(id) {
   });
 
   // Traco separando lancamentos do resumo
-  y += 4;
+  y += 10;
   ctx.strokeStyle = '#9ca3af';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
-  y += 38;
+  y += 50;
 
   // Resumo: valor a esquerda, rotulo depois
   var resumo = [
@@ -1492,7 +1529,7 @@ function gerarPNGSimples(id) {
     ctx.fillText(pt.i, COL_INT_FIM, y);
     ctx.textAlign = 'left';
     if (pt.d) ctx.fillText(pt.d, COL_INT_FIM, y);
-    ctx.fillStyle = r.forte ? r.cor : '#374151';
+    ctx.fillStyle = r.forte ? r.cor : '#4b5563';
     ctx.font = ROT_FONT;
     ctx.fillText(r.rot, COL_DATA, y);
     y += LINE_H;
