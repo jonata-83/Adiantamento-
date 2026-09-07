@@ -305,7 +305,7 @@
 <input type="file" id="importFileInput" accept="*/*" style="display:none" onchange="importarJSON(event)">
 
 <script>
-const APP_VERSAO = 'v01';
+const APP_VERSAO = 'v02';
 const STORAGE_KEY = 'adiantamentos-v3';
 let state = { pessoas: [], nextId: 1 };
 let currentTab = 'pessoas';
@@ -1338,18 +1338,171 @@ const PNG_FUNDOS = {
 
 function showModalFundoPNG(id) {
   showModal('🖼️ Exportar PNG', `
-    <div class="input-label">Cor do fundo</div>
+    <div class="input-label">Modelo</div>
     <div class="modal-actions">
       <button class="btn" style="background:#ffffff;color:#111827;border:1.5px solid #444" onclick="closeModal();exportarPNGPessoa(${id},'branco')">Branco</button>
       <button class="btn" style="background:#fdfbf2;color:#111827;border:1.5px solid #444" onclick="closeModal();exportarPNGPessoa(${id},'papel')">Papel</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" style="background:#ffffff;color:#111827;border:1.5px solid #2563eb" onclick="closeModal();exportarPNGPessoa(${id},'simples')">📄 Simples (lista + resumo)</button>
     </div>`);
 }
 
-// fundo: 'branco' ou 'papel'
+// fundo: 'branco', 'papel' ou 'simples'
 function exportarPNGPessoa(id, fundo) {
-  setTimeout(function(){ gerarPNGPessoa(id, fundo || 'branco'); }, 20);
+  setTimeout(function(){
+    if (fundo === 'simples') gerarPNGSimples(id);
+    else gerarPNGPessoa(id, fundo || 'branco');
+  }, 20);
 }
 
+// - MODELO SIMPLES -
+// Fundo branco, cabecalho com nome + data.
+// Cada linha: valor, data, descricao. Resumo no rodape.
+function gerarPNGSimples(id) {
+  const p = getPessoa(id); if (!p) return;
+  const isFluxo = p.modo === 'fluxo';
+  const sal = saldoP(p);
+
+  // Numero puro, sem R$ e sem os centavos ,00
+  const num = function(v) {
+    return fmt(v).replace(',00','').replace('R$\u00a0','').replace('R$ ','').trim();
+  };
+  const partesNum = function(v) {
+    var s = num(v).split(',');
+    return { i: s[0], d: s[1] ? ',' + s[1] : '' };
+  };
+
+  const lancs = p.lancamentos.slice().sort(function(a, b) {
+    var toNum = function(d) {
+      if (!d) return 0;
+      var pts = d.split('/');
+      return parseInt(pts[2]+pts[1]+pts[0], 10);
+    };
+    var da = toNum(a.data), db = toNum(b.data);
+    if (da !== db) return da - db;
+    return (a.ts||0) - (b.ts||0);
+  });
+
+  const rot1 = isFluxo ? 'saída' : 'a receber';
+  const rot2 = isFluxo ? 'entrada' : 'recebido';
+  const rot3 = sal > 0 ? 'Saldo a receber' : sal < 0 ? 'Saldo positivo' : 'Quitado';
+  const corSal = sal > 0 ? '#dc2626' : sal < 0 ? '#7c3aed' : '#16a34a';
+
+  const VAL_FONT  = 'bold 27px monospace';
+  const DATA_FONT = 'bold 19px sans-serif';
+  const DESC_FONT = '500 23px sans-serif';
+  const ROT_FONT  = 'bold 22px sans-serif';
+
+  // Mede as colunas antes de criar o canvas final
+  const meas = document.createElement('canvas').getContext('2d');
+  meas.font = VAL_FONT;
+  const wSinal = meas.measureText('+ ').width;
+  var maxInt = 0, maxDec = 0;
+  const todos = lancs.map(function(l){ return l.valor; })
+    .concat([totalEntradas(p), totalPagamentos(p), Math.abs(sal)]);
+  todos.forEach(function(v) {
+    var pt = partesNum(v);
+    var wi = meas.measureText(pt.i).width;
+    var wd = meas.measureText(pt.d).width;
+    if (wi > maxInt) maxInt = wi;
+    if (wd > maxDec) maxDec = wd;
+  });
+  meas.font = DATA_FONT;
+  const wData = meas.measureText('00/00').width;
+
+  const W = 820, PAD = 36, LINE_H = 46, TOPO = 112;
+  const COL_SINAL  = PAD;
+  const COL_INT_FIM = COL_SINAL + wSinal + maxInt;
+  const COL_DATA   = COL_INT_FIM + maxDec + 26;
+  const COL_DESC   = COL_DATA + wData + 26;
+  const H = TOPO + lancs.length * LINE_H + 158;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(W * PNG_SCALE);
+  canvas.height = Math.round(H * PNG_SCALE);
+  const ctx = canvas.getContext('2d', { alpha: false });
+  ctx.scale(PNG_SCALE, PNG_SCALE);
+
+  // Fundo branco
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+
+  // Cabecalho: nome grande a esquerda, data a direita
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 32px sans-serif';
+  ctx.fillText(p.nome, PAD, 54);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#6b7280';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.fillText(hoje(), W - PAD, 54);
+
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PAD, 74); ctx.lineTo(W - PAD, 74); ctx.stroke();
+
+  // Lancamentos: valor -> data -> descricao
+  var y = TOPO;
+  lancs.forEach(function(l) {
+    var isEnt = l.tipo === 'entrada';
+    var cor = isFluxo
+      ? (isEnt ? '#d97706' : '#15803d')
+      : (isEnt ? '#2563eb' : '#15803d');
+    var pt = partesNum(l.valor);
+
+    ctx.fillStyle = cor;
+    ctx.font = VAL_FONT;
+    ctx.textAlign = 'left';
+    ctx.fillText(isEnt ? '+' : '-', COL_SINAL, y);
+    ctx.textAlign = 'right';
+    ctx.fillText(pt.i, COL_INT_FIM, y);
+    ctx.textAlign = 'left';
+    if (pt.d) ctx.fillText(pt.d, COL_INT_FIM, y);
+
+    ctx.fillStyle = '#374151';
+    ctx.font = DATA_FONT;
+    ctx.fillText(l.data ? l.data.slice(0,5) : '', COL_DATA, y);
+
+    ctx.fillStyle = '#111827';
+    ctx.font = DESC_FONT;
+    ctx.fillText(truncate(ctx, l.descricao, W - PAD - COL_DESC), COL_DESC, y);
+
+    y += LINE_H;
+  });
+
+  // Traco separando lancamentos do resumo
+  y += 4;
+  ctx.strokeStyle = '#9ca3af';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD, y); ctx.lineTo(W - PAD, y); ctx.stroke();
+  y += 38;
+
+  // Resumo: valor a esquerda, rotulo depois
+  var resumo = [
+    { v: totalEntradas(p),   rot: rot1, cor: isFluxo ? '#d97706' : '#2563eb', forte: false },
+    { v: totalPagamentos(p), rot: rot2, cor: '#15803d',                        forte: false },
+    { v: Math.abs(sal),      rot: rot3, cor: corSal,                           forte: true  }
+  ];
+  resumo.forEach(function(r) {
+    var pt = partesNum(r.v);
+    ctx.fillStyle = r.cor;
+    ctx.font = VAL_FONT;
+    ctx.textAlign = 'right';
+    ctx.fillText(pt.i, COL_INT_FIM, y);
+    ctx.textAlign = 'left';
+    if (pt.d) ctx.fillText(pt.d, COL_INT_FIM, y);
+    ctx.fillStyle = r.forte ? r.cor : '#374151';
+    ctx.font = ROT_FONT;
+    ctx.fillText(r.rot, COL_DATA, y);
+    y += LINE_H;
+  });
+
+  const stamp = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  mostrarPreviewPNG(canvas, nomeSeguro(p.nome) + '-' + stamp + IMG_EXT, p.nome);
+}
+
+// fundo: 'branco' ou 'papel'
 function gerarPNGPessoa(id, fundo) {
   const tema = PNG_FUNDOS[fundo] || PNG_FUNDOS.branco;
   // Formata valor sem os centavos ,00
