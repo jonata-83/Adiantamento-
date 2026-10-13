@@ -1,4 +1,5 @@
-const CACHE_NAME = 'adiantamentos-v5';
+
+const CACHE_NAME = 'adiantamentos-v6';
 const urlsToCache = [
   '/Adiantamento-/index.html',
   '/Adiantamento-/adiantamentos.html',
