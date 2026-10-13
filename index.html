@@ -1095,43 +1095,121 @@ function exportarPDFPessoa(id) {
 
   const fmtS = function(v) { return fmt(v).replace(',00',''); };
 
-  // Cabeçalho: data pequena + nome grande
-  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
-  doc.text(now, 40, 26);
-  doc.setFontSize(26); doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-  doc.text(p.nome, 40, 52);
-  // Linha divisória
-  doc.setDrawColor(229,231,235); doc.setLineWidth(0.8);
-  doc.line(40, 62, 555, 62);
+  // Emoji: o jsPDF não desenha emoji, então cada emoji vira uma pequena imagem
+  // e o restante continua como texto normal do PDF (arquivo leve).
+  var RE_OK = /^[ -~ -ÿ–—‘’“”•…]$/;
+  function segmentos(t) { // [{txt, esp}] — esp = trecho que precisa virar imagem
+    var out = [], atual = '', esp = null;
+    Array.from(String(t || '')).forEach(function(ch) {
+      var e = !RE_OK.test(ch);
+      if (esp === null || e === esp) atual += ch;
+      else { out.push({txt: atual, esp: esp}); atual = ch; }
+      esp = e;
+    });
+    if (atual) out.push({txt: atual, esp: esp});
+    return out;
+  }
+  var _cv = document.createElement('canvas'), _cx = _cv.getContext('2d');
+  var ESC = 3, _cacheImg = {};
+  function fonteCv(tam) { return (tam*ESC) + 'px "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", sans-serif'; }
+  function largSeg(sg, tam, negrito) {
+    if (sg.esp) { _cx.font = fonteCv(tam); return Math.ceil(_cx.measureText(sg.txt).width / ESC) + 1 + tam * 0.2; }
+    doc.setFontSize(tam); doc.setFont('helvetica', negrito ? 'bold' : 'normal');
+    return doc.getTextWidth(sg.txt);
+  }
+  function larguraTxt(t, tam, negrito) {
+    return segmentos(t).reduce(function(s, sg) { return s + largSeg(sg, tam, negrito); }, 0);
+  }
+  function imgSeg(txt, tam) {
+    var k = tam + '|' + txt;
+    if (!_cacheImg[k]) {
+      _cx.font = fonteCv(tam);
+      var w = Math.ceil(_cx.measureText(txt).width / ESC) + 1, h = Math.ceil(tam * 1.4);
+      _cv.width = w * ESC; _cv.height = h * ESC;
+      _cx.font = fonteCv(tam); _cx.textBaseline = 'alphabetic'; _cx.fillStyle = '#111827';
+      _cx.fillText(txt, 0, tam * 1.1 * ESC);
+      _cacheImg[k] = { url: _cv.toDataURL('image/png'), w: w, h: h, alias: 'em' + Object.keys(_cacheImg).length };
+    }
+    return _cacheImg[k];
+  }
+  // Desenha texto (com emoji); yBase = linha de base, igual ao doc.text
+  function textoCv(texto, x, yBase, tam, rgb, negrito) {
+    segmentos(texto).forEach(function(sg) {
+      if (sg.esp) {
+        var im = imgSeg(sg.txt, tam);
+        x += tam * 0.12;
+        doc.addImage(im.url, 'PNG', x, yBase - tam * 1.1, im.w, im.h, im.alias);
+        x += im.w + tam * 0.08;
+      } else {
+        doc.setFontSize(tam); doc.setFont('helvetica', negrito ? 'bold' : 'normal');
+        doc.setTextColor(rgb[0], rgb[1], rgb[2]); doc.text(sg.txt, x, yBase);
+        x += doc.getTextWidth(sg.txt);
+      }
+    });
+  }
+  // Quebra o texto em até maxLinhas linhas que caibam em maxW (pt)
+  function quebrarLinhas(texto, tam, negrito, maxW, maxLinhas) {
+    var palavras = String(texto || '').split(/\s+/).filter(Boolean), linhas = [], atual = '';
+    palavras.forEach(function(w) {
+      var teste = atual ? atual + ' ' + w : w;
+      if (larguraTxt(teste, tam, negrito) <= maxW || !atual) atual = teste;
+      else { linhas.push(atual); atual = w; }
+    });
+    if (atual) linhas.push(atual);
+    if (linhas.length > maxLinhas) {
+      linhas = linhas.slice(0, maxLinhas);
+      linhas[maxLinhas-1] += '…';
+    }
+    return linhas.map(function(l) {
+      if (larguraTxt(l, tam, negrito) <= maxW) return l;
+      var ch = Array.from(l);
+      while (ch.length > 1 && larguraTxt(ch.join('') + '…', tam, negrito) > maxW) ch.pop();
+      return ch.join('') + '…';
+    });
+  }
+
+  // Cabeçalho: data + nome grande
+  doc.setFontSize(11); doc.setFont('helvetica','normal'); doc.setTextColor(75,85,99);
+  doc.text(now, 40, 30);
+  var nomeL = quebrarLinhas(p.nome, 28, true, 515, 1)[0];
+  textoCv(nomeL, 40, 62, 28, [17,24,39], true);
+  doc.setDrawColor(209,213,219); doc.setLineWidth(1);
+  doc.line(40, 74, 555, 74);
 
   // Três boxes: SAÍDA | ENTRADA | SALDO
   var bW = (555 - 40 - 16) / 3;
-  var bY = 70, bH = 50;
+  var bY = 84, bH = 62;
+  doc.setFont('helvetica','bold');
   // Box 1
-  doc.setFillColor(bg1[0],bg1[1],bg1[2]); doc.roundedRect(40, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(9); doc.setTextColor(cor1[0],cor1[1],cor1[2]); doc.text(box1Label, 48, bY+14);
-  doc.setFontSize(16); doc.text(fmtS(totalEntradas(p)), 48, bY+38);
+  doc.setFillColor(bg1[0],bg1[1],bg1[2]); doc.roundedRect(40, bY, bW, bH, 4,4,'F');
+  doc.setFontSize(11); doc.setTextColor(cor1[0],cor1[1],cor1[2]); doc.text(box1Label, 50, bY+18);
+  doc.setFontSize(20); doc.text(fmtS(totalEntradas(p)), 50, bY+46);
   // Box 2
-  doc.setFillColor(220,252,231); doc.roundedRect(40+bW+8, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(9); doc.setTextColor(21,128,61); doc.text(box2Label, 48+bW+8, bY+14);
-  doc.setFontSize(16); doc.text(fmtS(totalPagamentos(p)), 48+bW+8, bY+38);
+  doc.setFillColor(220,252,231); doc.roundedRect(40+bW+8, bY, bW, bH, 4,4,'F');
+  doc.setFontSize(11); doc.setTextColor(21,128,61); doc.text(box2Label, 50+bW+8, bY+18);
+  doc.setFontSize(20); doc.text(fmtS(totalPagamentos(p)), 50+bW+8, bY+46);
   // Box 3 - SALDO
   var salBg = sal > 0 ? [254,226,226] : sal < 0 ? [237,233,254] : [220,252,231];
-  doc.setFillColor(salBg[0],salBg[1],salBg[2]); doc.roundedRect(40+bW*2+16, bY, bW, bH, 3,3,'F');
-  doc.setFontSize(9); doc.setTextColor(salColor[0],salColor[1],salColor[2]); doc.text('SALDO', 48+bW*2+16, bY+14);
-  doc.setFontSize(16); doc.text(sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado', 48+bW*2+16, bY+38);
+  doc.setFillColor(salBg[0],salBg[1],salBg[2]); doc.roundedRect(40+bW*2+16, bY, bW, bH, 4,4,'F');
+  doc.setFontSize(11); doc.setTextColor(salColor[0],salColor[1],salColor[2]); doc.text('SALDO', 50+bW*2+16, bY+18);
+  doc.setFontSize(20); doc.text(sal !== 0 ? fmtS(Math.abs(sal)) : 'Quitado', 50+bW*2+16, bY+46);
 
   // Label MOVIMENTAÇÕES
-  var y = bY + bH + 14;
-  doc.setFontSize(9); doc.setFont('helvetica','bold'); doc.setTextColor(156,163,175);
+  var y = bY + bH + 20;
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(107,114,128);
   doc.text('MOVIMENTAÇÕES', 40, y);
-  y += 10;
+  y += 8;
+
+  // Tamanhos (maiores para facilitar a leitura)
+  var TAM_VAL = 15, TAM_DATA = 14, TAM_DESC = 14;
+  var LINHA_DESC = 17;   // altura de cada linha extra da descrição
+  var ROW_H = 26;        // altura da linha com 1 linha de descrição
 
   // Calcular coluna decimal (largura máxima da parte inteira)
-  doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.setFontSize(TAM_VAL); doc.setFont('helvetica','bold');
   var maxW = 0;
   lancs.forEach(function(l) {
-    var s = fmtS(l.valor).replace('R$\u00a0','').replace('R$ ','').trim().split(',')[0];
+    var s = fmtS(l.valor).replace('R$ ','').replace('R$ ','').trim().split(',')[0];
     var w = doc.getTextWidth(s);
     if(w > maxW) maxW = w;
   });
@@ -1139,11 +1217,12 @@ function exportarPDFPessoa(id) {
   var COL_RS    = COL_SINAL + doc.getTextWidth('+') + 2;
   var COL_VIRGULA = COL_RS + doc.getTextWidth('R$ ') + maxW + 2;
   // Ordem: valor -> data -> descrição
-  var COL_DATA  = COL_VIRGULA + doc.getTextWidth(',00') + 16;
+  var COL_DATA  = COL_VIRGULA + doc.getTextWidth(',00') + 14;
+  doc.setFontSize(TAM_DATA); doc.setFont('helvetica','normal');
   var DATA_W    = doc.getTextWidth('00/00');
-  var COL_DESC  = COL_DATA + DATA_W + 18;
+  var COL_DESC  = COL_DATA + DATA_W + 14;
   var LIM_DIR   = 555;
-  var ROW_H = 20;
+  var maxDescW  = LIM_DIR - COL_DESC - 6;
   var PAG_ALT = doc.internal.pageSize.getHeight(); // 842pt no A4
   var MARGEM_INF = 40;
 
@@ -1151,65 +1230,64 @@ function exportarPDFPessoa(id) {
   function garantirEspaco(alturaNecessaria) {
     if (y + alturaNecessaria <= PAG_ALT - MARGEM_INF) return;
     doc.addPage();
-    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
-    doc.text(p.nome + ' — continuação', 40, 30);
-    doc.setDrawColor(229,231,235); doc.setLineWidth(0.8);
-    doc.line(40, 38, 555, 38);
-    y = 46;
+    var cab = quebrarLinhas(p.nome, 12, true, 400, 1)[0];
+    textoCv(cab, 40, 32, 12, [75,85,99], true);
+    doc.setFontSize(12); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
+    doc.text('— continuação', 40 + larguraTxt(cab, 12, true) + 6, 32);
+    doc.setDrawColor(209,213,219); doc.setLineWidth(1);
+    doc.line(40, 42, 555, 42);
+    y = 50;
   }
 
   lancs.forEach(function(l, i) {
-    garantirEspaco(ROW_H + 2);
+    var linhasDesc = quebrarLinhas(l.descricao, TAM_DESC, false, maxDescW, 3);
+    if (!linhasDesc.length) linhasDesc = [''];
+    var altLinha = ROW_H + (linhasDesc.length - 1) * LINHA_DESC;
+    garantirEspaco(altLinha + 2);
     var isEnt = l.tipo === 'entrada';
     var corLanc = isFluxo ? (isEnt ? [217,119,6] : [21,128,61]) : (isEnt ? [37,99,235] : [21,128,61]);
     var fmtd = fmtS(l.valor);
-    var semRS = fmtd.replace('R$\u00a0','').replace('R$ ','').trim();
+    var semRS = fmtd.replace('R$ ','').replace('R$ ','').trim();
     var partes = semRS.split(',');
     var parteInt = partes[0];
     var parteDec = (partes[1] && partes[1] !== '00') ? ',' + partes[1] : '';
     var sinal = isEnt ? '+' : '-';
     var dataCorta = l.data ? l.data.slice(0,5) : '';
+    var base = y + 18;
 
     // Fundo alternado
     if(i % 2 === 0) {
-      doc.setFillColor(249,250,251);
-      doc.rect(40, y+1, 515, ROW_H, 'F');
+      doc.setFillColor(243,244,246);
+      doc.rect(40, y+1, 515, altLinha, 'F');
     }
 
-    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.setFontSize(TAM_VAL); doc.setFont('helvetica','bold');
     doc.setTextColor(corLanc[0],corLanc[1],corLanc[2]);
-    // Sinal
-    doc.text(sinal, COL_SINAL, y+14);
-    // R$
-    doc.text('R$', COL_RS, y+14);
-    // Parte inteira alinhada à direita da coluna
+    doc.text(sinal, COL_SINAL, base);
+    doc.text('R$', COL_RS, base);
     var intW = doc.getTextWidth(parteInt);
-    doc.text(parteInt, COL_VIRGULA - intW, y+14);
-    // Parte decimal
-    if(parteDec) doc.text(parteDec, COL_VIRGULA, y+14);
+    doc.text(parteInt, COL_VIRGULA - intW, base);
+    if(parteDec) doc.text(parteDec, COL_VIRGULA, base);
 
-    // Data (logo após o valor)
-    doc.setTextColor(55,65,81);
-    doc.text(dataCorta, COL_DATA, y+14);
+    // Data
+    doc.setFontSize(TAM_DATA); doc.setFont('helvetica','normal'); doc.setTextColor(55,65,81);
+    doc.text(dataCorta, COL_DATA, base);
 
-    // Descrição
-    doc.setTextColor(17,24,39);
-    var maxDescW = LIM_DIR - COL_DESC - 6;
-    var desc = l.descricao;
-    while(desc.length > 0 && doc.getTextWidth(desc) > maxDescW) desc = desc.slice(0,-1);
-    if(desc.length < l.descricao.length) desc += '...';
-    doc.text(desc, COL_DESC, y+14);
+    // Descrição (aceita emoji e quebra em até 3 linhas)
+    linhasDesc.forEach(function(ln, k) {
+      textoCv(ln, COL_DESC, base + k * LINHA_DESC, TAM_DESC, [17,24,39], false);
+    });
 
-    y += ROW_H;
+    y += altLinha;
   });
 
   // Linha e saldo final
-  garantirEspaco(32);
-  y += 6;
-  doc.setDrawColor(229,231,235); doc.setLineWidth(0.5);
+  garantirEspaco(40);
+  y += 8;
+  doc.setDrawColor(209,213,219); doc.setLineWidth(0.8);
   doc.line(40, y, 555, y);
-  y += 18;
-  doc.setFontSize(15); doc.setTextColor(salColor[0],salColor[1],salColor[2]);
+  y += 24;
+  doc.setFontSize(18); doc.setFont('helvetica','bold'); doc.setTextColor(salColor[0],salColor[1],salColor[2]);
   doc.text(salTxt, 40, y);
 
   // Preview HTML com mesmo estilo
