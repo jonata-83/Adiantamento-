@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -1143,8 +1144,22 @@ function exportarPDFPessoa(id) {
   var COL_DESC  = COL_DATA + DATA_W + 18;
   var LIM_DIR   = 555;
   var ROW_H = 20;
+  var PAG_ALT = doc.internal.pageSize.getHeight(); // 842pt no A4
+  var MARGEM_INF = 40;
+
+  // Quebra de página: se não couber, cria nova folha com cabeçalho de continuação
+  function garantirEspaco(alturaNecessaria) {
+    if (y + alturaNecessaria <= PAG_ALT - MARGEM_INF) return;
+    doc.addPage();
+    doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(107,114,128);
+    doc.text(p.nome + ' — continuação', 40, 30);
+    doc.setDrawColor(229,231,235); doc.setLineWidth(0.8);
+    doc.line(40, 38, 555, 38);
+    y = 46;
+  }
 
   lancs.forEach(function(l, i) {
+    garantirEspaco(ROW_H + 2);
     var isEnt = l.tipo === 'entrada';
     var corLanc = isFluxo ? (isEnt ? [217,119,6] : [21,128,61]) : (isEnt ? [37,99,235] : [21,128,61]);
     var fmtd = fmtS(l.valor);
@@ -1189,6 +1204,7 @@ function exportarPDFPessoa(id) {
   });
 
   // Linha e saldo final
+  garantirEspaco(32);
   y += 6;
   doc.setDrawColor(229,231,235); doc.setLineWidth(0.5);
   doc.line(40, y, 555, y);
